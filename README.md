@@ -13,6 +13,7 @@ Ce projet a pour but d'explorer et d'analyser les dynamiques du marché spot de 
 
 - [EPEX Spot Market Data](https://www.epexspot.com/en/market-data)
 - Données RTE : consommation, production, export…
+- Données ENTSO-E: prix spot
 
 ## Technologies
 

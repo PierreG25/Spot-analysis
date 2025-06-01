@@ -11,9 +11,10 @@ def clean_data(df):
     df = df.drop(['Area', 'Sequence', 'Intraday Period (CET/CEST)', 'Intraday Price (EUR/MWh)'], axis=1)
     df['MTU (CET/CEST)'] = df['MTU (CET/CEST)'].str.split(' - ').str[0]
     df['MTU (CET/CEST)'] = pd.to_datetime(df['MTU (CET/CEST)'], format="%d/%m/%Y %H:%M:%S")
-    df['month'] = df['MTU (CET/CEST)'].dt.month
-    df['day'] = df['MTU (CET/CEST)'].dt.day
-    df['hour'] = df['MTU (CET/CEST)'].dt.hour
-    df = df[['MTU (CET/CEST)','month','day','hour','Day-ahead Price (EUR/MWh)']]
+    df["Date"] = df['MTU (CET/CEST)'].dt.date
+    df["Hour"] = df['MTU (CET/CEST)'].dt.hour
+    df["Weekday"] = df['MTU (CET/CEST)'].dt.day_name()
+    df["Week"] = df['MTU (CET/CEST)'].dt.week()
+    df["Weekend"] = df["Weekday"].isin(["Saturday", "Sunday"])
     return df
 # End-of-file (EOF)

@@ -15,6 +15,7 @@ def clean_data(df):
     df["Hour"] = df['MTU (CET/CEST)'].dt.hour
     df["Weekday"] = df['MTU (CET/CEST)'].dt.day_name()
     df["Week"] = df['MTU (CET/CEST)'].dt.isocalendar().week
+    df["Month"] = df['MTU (CET/CEST)'].dt.month
     df["Weekend"] = df["Weekday"].isin(["Saturday", "Sunday"])
     return df
 # End-of-file (EOF)

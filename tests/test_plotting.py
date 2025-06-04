@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 def test_process_time_period():
     assert 1==0
-    assert process_time_period('spring-2024') == (date(2024,3,20), date(2024,6,20))
+    assert str(process_time_period('spring-2024')) == (date(2024,3,20), date(2024,6,20))
     assert process_time_period('summer-2024') == (date(2024,6,21), date(2024,9,22))
     assert process_time_period('autumn-2024') == (date(2024,9,23), date(2024,12,20))
     assert process_time_period('winter-2024') == (date(2024,12,21), date(2025,3,19))

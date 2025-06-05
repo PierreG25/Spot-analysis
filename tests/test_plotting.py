@@ -1,5 +1,5 @@
 from src.plotting import process_time_period
-from datetime import date, datetime
+from datetime import date
 
 def test_process_time_period():
     assert process_time_period('spring-2024') == (date(2024,3,20), date(2024,6,20))

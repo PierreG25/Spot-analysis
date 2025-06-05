@@ -1,8 +1,10 @@
 pandas
 matplotlib
+scipy
 seaborn
 jupyter
 requests
 beautifulsoup4
+datetime
 pytest
 pre-commit

@@ -4,5 +4,6 @@ repos:
       - id: run-pytest
         name: Run Pytest before push
         entry: pytest
-        language: system  # Use the system Python
-        types: [python]
+        language: system
+        always_run: true  # <--- Add this line
+        pass_filenames: false  # <--- Prevents passing only staged files to pytest

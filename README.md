@@ -17,8 +17,12 @@ Ce projet a pour but d'explorer et d'analyser les dynamiques du marché spot de 
 
 ## Technologies
 
-- Python (pandas, matplotlib, seaborn)
+- Python (pandas, matplotlib, scipy)
 - Jupyter Notebook
+
+## Module
+
+- Install all the required packages by running: pip install -r requirements.txt
 
 ## Aperçu
 

@@ -92,10 +92,9 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for year in range(start_year, end_year+1):
-
-        period = format_period(period, year)
-        (start, end) = standardize_time_period(period)
-        print(start,end)
+        period_yearly = format_period(period, year)
+        (start, end) = standardize_time_period(period_yearly)
+        
         df_yearly = df[(df['Date'] >= start) & (df['Date'] <= end)]
         daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
 
@@ -103,6 +102,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
         y = daily_avg['Day-ahead Price (EUR/MWh)']
         ax.plot(x,y, label=str(year), alpha=0.8)
         ax.scatter(x,y, marker='+', color='r')
+        print(f'{year} OK')
 
     ax.set_xlabel('Hours')
     ax.set_ylabel('Day-ahead prices')

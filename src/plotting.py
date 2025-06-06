@@ -1,8 +1,24 @@
 from datetime import date, datetime
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.signal import find_peaks
 
-def process_time_period(period):
+def format_period(period, year):    
+    year = str(year)
+
+    # If period is a tuple of two MM-DD strings
+    if isinstance(period, tuple) and len(period) == 2:
+        start, end = period
+        return (f"{year}-{start}", f"{year}-{end}")
+    
+    # If period is a season (string)
+    elif isinstance(period, str):
+        return f"{period}-{year}"
+    
+    else:
+        raise ValueError("Invalid period format. Must be ('MM-DD', 'MM-DD') or 'season'.")
+
+def standardize_time_period(period):
     """
     Function converting a time period into the right format for further analysis
     
@@ -42,7 +58,7 @@ def plot_price_hour(df, period):
     """
     Function plotting the average hourly day ahead prices over a certain period of time
     """
-    (start, end) = process_time_period(period)
+    (start, end) = standardize_time_period(period)
 
     df_period = df[(df['Date'] >= start) & (df['Date'] <= end)]
     daily_avg = df_period.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
@@ -67,3 +83,33 @@ def plot_price_hour(df, period):
     plt.ylabel('Day-ahead Price (EUR/MWh)')
     plt.legend()
     plt.show()
+
+
+def plot_avg_hourly_prices(df, start_year, end_year, period):
+    """
+    Function plotting the average hourly day ahead prices over a certain period of time
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for year in range(start_year, end_year+1):
+
+        period = format_period(period, year)
+        (start, end) = standardize_time_period(period)
+        print(start,end)
+        df_yearly = df[(df['Date'] >= start) & (df['Date'] <= end)]
+        daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
+
+        x = daily_avg['Hour']
+        y = daily_avg['Day-ahead Price (EUR/MWh)']
+        ax.plot(x,y, label=str(year), alpha=0.8)
+        ax.scatter(x,y, marker='+', color='r')
+
+    ax.set_xlabel('Hours')
+    ax.set_ylabel('Day-ahead prices')
+    ax.set_title(f'Average day-ahead hourly prices from {start_year} to {end_year}')
+    ax.legend()
+    ax.grid(True)
+    plt.show()
+
+print(format_period(('01-02', '05-26'), '2025'))
+print(format_period('winter', '2025'))

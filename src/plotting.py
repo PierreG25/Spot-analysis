@@ -3,7 +3,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import find_peaks
 
-def format_period(period, year):    
+####################### Helper Functions #######################
+
+def format_period(period, year):
+    """
+    Concatenate a period with a respective year.
+    For example:
+    - format_period(summer, 2025) returns 'summer-2025'
+    - format_period(('01-02', '05-26'), 2025) returns ('2025-01-02', '2025-05-26')
+    """
     year = str(year)
 
     # If period is a tuple of two MM-DD strings
@@ -17,6 +25,7 @@ def format_period(period, year):
     
     else:
         raise ValueError("Invalid period format. Must be ('MM-DD', 'MM-DD') or 'season'.")
+
 
 def standardize_time_period(period):
     """
@@ -33,10 +42,10 @@ def standardize_time_period(period):
         process_period(("2024-06-01", "2024-09-01"))
     """
     season_map = {
-        'spring': (lambda y: (date(y, 3, 20), date(y, 6, 20))),
-        'summer': (lambda y: (date(y, 6, 21), date(y, 9, 22))),
-        'autumn': (lambda y: (date(y, 9, 23), date(y, 12, 20))),
-        'winter': (lambda y: (date(y, 12, 21), date(y+1, 3, 19)))
+        'spring': (lambda y: (pd.Timestamp(y, 3, 20).normalize(), pd.Timestamp(y, 6, 20).normalize())),
+        'summer': (lambda y: (pd.Timestamp(y, 6, 21).normalize(), pd.Timestamp(y, 9, 22).normalize())),
+        'autumn': (lambda y: (pd.Timestamp(y, 9, 23).normalize(), pd.Timestamp(y, 12, 20).normalize())),
+        'winter': (lambda y: (pd.Timestamp(y, 12, 21).normalize(), pd.Timestamp(y+1, 3, 19).normalize()))
     }
 
     if isinstance(period, str):
@@ -48,18 +57,25 @@ def standardize_time_period(period):
             return period_func(year)
         raise ValueError("Wrong input, use one of: 'winter', 'spring', 'summer', 'autumn'")
     if isinstance(period, tuple):
-        start_date = datetime.strptime(period[0], "%Y-%m-%d")
-        end_date = datetime.strptime(period[1], "%Y-%m-%d")
-        return (start_date.date(), end_date.date())
+        start_date = pd.to_datetime(period[0])
+        end_date = pd.to_datetime(period[1])
+        print(start_date)
+        print(type(start_date))
+        return (start_date, end_date)
     raise ValueError("Wrong input. Expected inputs: 'season-YYYY' or ('YYYY-MM-DD', 'YYYY-MM-DD')'")
 
+
+################################### Plots functions ################################################
 
 def plot_price_hour(df, period):
     """
     Function plotting the average hourly day ahead prices over a certain period of time
     """
     (start, end) = standardize_time_period(period)
-
+    print(df['Date'][0])
+    print(type(df['Date'][0]))
+    print(df)
+    df.to_csv('../data/TESTTTTT.csv')
     df_period = df[(df['Date'] >= start) & (df['Date'] <= end)]
     daily_avg = df_period.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
 
@@ -84,6 +100,7 @@ def plot_price_hour(df, period):
     plt.legend()
     plt.show()
 
+### Lines plot
 
 def plot_avg_hourly_prices(df, start_year, end_year, period):
     """
@@ -94,7 +111,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
     for year in range(start_year, end_year+1):
         period_yearly = format_period(period, year)
         (start, end) = standardize_time_period(period_yearly)
-        
+
         df_yearly = df[(df['Date'] >= start) & (df['Date'] <= end)]
         daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
 
@@ -110,6 +127,3 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
     ax.legend()
     ax.grid(True)
     plt.show()
-
-print(format_period(('01-02', '05-26'), '2025'))
-print(format_period('winter', '2025'))

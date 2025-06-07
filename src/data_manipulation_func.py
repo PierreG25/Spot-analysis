@@ -1,6 +1,8 @@
 """module"""
 
 import pandas as pd
+import os
+from datetime import datetime
 
 def load_epex_data(filepath):
     """Function loading a csv file into a DataFrame"""
@@ -19,3 +21,20 @@ def clean_data(df):
     df["Weekend"] = df["Weekday"].isin(["Saturday", "Sunday"])
     return df
 # End-of-file (EOF)
+
+def exploitable_data(folderpath):
+    dataframes = []
+    for file in os.listdir(folderpath):
+        if file.endswith('.csv'):
+            filepath = os.path.join(folderpath, file)
+            df = pd.read_csv(filepath, parse_dates=['Date'])  # adjust column name if needed
+            
+            year = df['Date'].dt.year.min()  # get the year from the data itself
+            dataframes.append((year, df))
+
+    # Sort by year (oldest to newest)
+    dataframes.sort(key=lambda x: x[0])
+
+    # Extract only the DataFrames, now in the right order
+    df_concat = pd.concat([df for _, df in dataframes], ignore_index=True)
+    return df_concat

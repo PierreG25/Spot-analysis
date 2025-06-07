@@ -2,7 +2,6 @@
 
 import pandas as pd
 import os
-from datetime import datetime
 
 def load_epex_data(filepath):
     """Function loading a csv file into a DataFrame"""

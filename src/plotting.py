@@ -64,6 +64,11 @@ def standardize_time_period(period):
         return (start_date, end_date)
     raise ValueError("Wrong input. Expected inputs: 'season-YYYY' or ('YYYY-MM-DD', 'YYYY-MM-DD')'")
 
+def rolling_mean(df, start, end, wd):
+    df = df.set_index('MTU (CET/CEST)')
+    df_filtered = df[(df.index >= start) & (df.index <= end)]
+    daily_avg = df_filtered['Day-ahead Price (EUR/MWh)'].resample('D').mean()
+    return (df_filtered['Date'].unique(),daily_avg.rolling(window = wd, center = True).mean())
 
 ################################### Plots functions ################################################
 
@@ -100,7 +105,7 @@ def plot_price_hour(df, period):
     plt.legend()
     plt.show()
 
-### Lines plot
+#### Lines plot
 
 def plot_avg_hourly_prices(df, start_year, end_year, period):
     """
@@ -127,3 +132,27 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
     ax.legend()
     ax.grid(True)
     plt.show()
+
+#### Time serie plot
+
+def plot_smooth_prices(df, start, end, window_days):
+    x, y = rolling_mean(df, start, end, window_days)
+
+    fig, ax = plt.subplots()
+
+    ax.plot(x, y)
+
+    ax.set_xlabel('Dates')
+    ax.set_ylabel('Day-ahead prices')
+    ax.set_title(f'Daily Average Electricity Prices ({start}–{end})\nwith {window_days}-Day Rolling Mean')
+    ax.grid(True)
+    plt.show()
+
+#### Boxplot 
+
+def plot_box(start_year, end_year, period):
+    return
+#### Heatmap 
+
+def plot_heatmap(start_year, end_year):
+    return

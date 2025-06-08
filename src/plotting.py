@@ -1,4 +1,3 @@
-from datetime import date, datetime
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import find_peaks

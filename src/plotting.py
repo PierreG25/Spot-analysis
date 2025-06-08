@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
 from scipy.signal import find_peaks
 
@@ -137,14 +138,18 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
 def plot_smooth_prices(df, start, end, window_days):
     x, y = rolling_mean(df, start, end, window_days)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(12,6))
 
     ax.plot(x, y)
 
     ax.set_xlabel('Dates')
-    ax.set_ylabel('Day-ahead prices')
+    ax.set_ylabel('Day-ahead prices (EUR/MWh)')
     ax.set_title(f'Daily Average Electricity Prices ({start}–{end})\nwith {window_days}-Day Rolling Mean')
     ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
+    fig.autofmt_xdate()
+    plt.tight_layout()
     plt.show()
 
 #### Boxplot 

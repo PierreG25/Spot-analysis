@@ -65,7 +65,6 @@ def standardize_time_period(period):
     raise ValueError("Wrong input. Expected inputs: 'season-YYYY' or ('YYYY-MM-DD', 'YYYY-MM-DD')'")
 
 def rolling_mean(df, start, end, wd):
-    df = df.set_index('MTU (CET/CEST)')
     df_filtered = df[(df.index >= start) & (df.index <= end)]
     daily_avg = df_filtered['Day-ahead Price (EUR/MWh)'].resample('D').mean()
     return (df_filtered['Date'].unique(),daily_avg.rolling(window = wd, center = True).mean())
@@ -136,6 +135,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
 #### Time serie plot
 
 def plot_smooth_prices(df, start, end, window_days):
+    df = df.set_index('MTU (CET/CEST)')
     x, y = rolling_mean(df, start, end, window_days)
 
     fig, ax = plt.subplots(figsize=(12,6))

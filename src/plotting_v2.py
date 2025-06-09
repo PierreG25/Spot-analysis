@@ -46,6 +46,14 @@ def split_period(period):
         return f'{period[0]} - {period[1]}'
     return period
 
+def extract_periodic_data(df, start_year, end_year, filter_period):
+    filtered = []
+    for year in range(start_year, end_year + 1):
+        start_date, end_date = format_period(filter_period, year)
+        mask = (df.index >= start_date) & (df.index <= end_date)
+        filtered.append(df.loc[mask])
+    return pd.concat(filtered)
+
 ########################################## Plots Functions ########################################################
 
 ######### Time serie plot
@@ -80,8 +88,9 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
 
     for year in range(start_year, end_year+1):
         (start, end) = format_period(period, year)
-
-        df_yearly = df[(df.index >= start) & (df.index <= end)]
+        mask = (df.index >= start) & (df.index <= end)
+        
+        df_yearly = df[mask]
         daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
 
         x = daily_avg['Hour']
@@ -114,13 +123,7 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period):
 
     # Convert to datetime and filter by year
     df = df.set_index('MTU (CET/CEST)')
-
-    filtered = []
-    for year in range(start_year, end_year + 1):
-        start_date, end_date = format_period(period, year)
-        mask = (df.index >= start_date) & (df.index <= end_date)
-        filtered.append(df.loc[mask])
-    df = pd.concat(filtered)
+    df = extract_periodic_data(df, start_year, end_year, period)
 
     # Aggregate to daily average price
     df_daily = df['Day-ahead Price (EUR/MWh)'].resample('D').mean().to_frame()
@@ -149,13 +152,7 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period):
 def plot_heatmap(df, start_year, end_year, period):
     # Convert to datetime and filter by year
     df = df.set_index('MTU (CET/CEST)')
-
-    filtered = []
-    for year in range(start_year, end_year + 1):
-        start_date, end_date = format_period(period, year)
-        mask = (df.index >= start_date) & (df.index <= end_date)
-        filtered.append(df.loc[mask])
-    df_concat = pd.concat(filtered)
+    df_concat = extract_periodic_data(df, start_year, end_year, period)
 
     df_concat['weekday'] = df_concat.index.day_name()
     df_concat['hour'] = df_concat.index.hour

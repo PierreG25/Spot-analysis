@@ -36,7 +36,7 @@ def format_period(period, year):
 
 
 def rolling_mean(df, start, end, wd):
-    mask = (df.index >= start) & (df.index <= end)
+    mask = (df.index >= start) & (df.index < end)
     df_filtered = df[mask]
     daily_avg = df_filtered['Day-ahead Price (EUR/MWh)'].resample('D').mean()
     return (df_filtered['Date'].unique(), daily_avg.rolling(window = wd, center = True).mean())
@@ -50,7 +50,7 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
     filtered = []
     for year in range(start_year, end_year + 1):
         start_date, end_date = format_period(filter_period, year)
-        mask = (df.index >= start_date) & (df.index <= end_date)
+        mask = (df.index >= start_date) & (df.index < end_date)
         filtered.append(df.loc[mask])
     return pd.concat(filtered)
 
@@ -88,15 +88,17 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
 
     for year in range(start_year, end_year+1):
         (start, end) = format_period(period, year)
-        mask = (df.index >= start) & (df.index <= end)
+        mask = (df.index >= start) & (df.index < end)
         
         df_yearly = df[mask]
+        print(df_yearly)
         daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
 
         x = daily_avg['Hour']
         y = daily_avg['Day-ahead Price (EUR/MWh)']
-        ax.plot(x,y, label=str(year), alpha=0.8)
-        ax.scatter(x,y, marker='+', color ='k', zorder=3)
+        ax.step(x, y, where='post', label=str(year), alpha=0.8)
+        # ax.plot(x,y, label=str(year), alpha=0.8)
+        # ax.scatter(x,y, marker='+', color ='k', zorder=3)
         print(f'{year} OK')
 
     ax.set_xlabel('Hours')

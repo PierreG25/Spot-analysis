@@ -76,7 +76,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
     Function plotting the average hourly day ahead prices over a certain period of time
     """
     df = df.set_index('MTU (CET/CEST)')
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
 
     for year in range(start_year, end_year+1):
         (start, end) = format_period(period, year)
@@ -92,9 +92,10 @@ def plot_avg_hourly_prices(df, start_year, end_year, period):
 
     ax.set_xlabel('Hours')
     ax.set_ylabel('Day-ahead prices (EUR/MWh)')
-    ax.set_title(f'Average day-ahead hourly prices from {start_year} to {end_year} \nwithin {split_period(period)}')
+    ax.set_title(f'Average day-ahead hourly prices ({start_year} - {end_year}) \nwithin {split_period(period)}')
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
     plt.show()
 
 
@@ -145,5 +146,34 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period):
 
 ######### Heat map
 
-# def plot_heatmap(df, start_year, end_year, period):
-#     return
+def plot_heatmap(df, start_year, end_year, period):
+    # Convert to datetime and filter by year
+    df = df.set_index('MTU (CET/CEST)')
+
+    filtered = []
+    for year in range(start_year, end_year + 1):
+        start_date, end_date = format_period(period, year)
+        mask = (df.index >= start_date) & (df.index <= end_date)
+        filtered.append(df.loc[mask])
+    df_concat = pd.concat(filtered)
+
+    df_concat['weekday'] = df_concat.index.day_name()
+    df_concat['hour'] = df_concat.index.hour
+
+    # Create pivot table of average prices
+    heatmap_data = df_concat.pivot_table(
+        index='weekday', columns='hour', values='Day-ahead Price (EUR/MWh)', aggfunc='mean'
+    )
+
+    # Ensure correct weekday order
+    weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    heatmap_data = heatmap_data.reindex(weekday_order)
+
+    # Plot the heatmap
+    plt.figure(figsize=(14, 6))
+    sns.heatmap(heatmap_data, cmap='coolwarm', linewidths=0.5, cbar_kws={'label': 'Average Price (EUR/MWh)'})
+    plt.title(f"Average Electricity Price by Weekday and Hour ({start_year} - {end_year}) \nwithin {split_period(period)}")
+    plt.xlabel("Hour of Day")
+    plt.ylabel("Day of Week")
+    plt.tight_layout()
+    plt.show()

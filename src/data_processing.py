@@ -2,6 +2,7 @@
 
 import pandas as pd
 import re
+import numpy as np
 from typing import List, Dict
 import os
 
@@ -26,7 +27,7 @@ def group_files_by_type(folder_path: str, types: List[str], extension: str = "")
 def load_dataframes(grouped_files: Dict[str, List[str]]) -> Dict[str, List[pd.DataFrame]]:
     dataframes = {}
     for dtype, files in grouped_files.items():
-        dfs = [pd.read_csv(f) for f in files]
+        dfs = [pd.read_csv(f, na_values=['N/A', 'n/a', 'NA', '-', '']) for f in files]
         dataframes[dtype] = dfs  # list of DataFrames, one per file
     return dataframes
 
@@ -49,8 +50,58 @@ def setup_time(df, datetime_col, format):
     """Function cleaning the data to make them exploitable"""
     df[datetime_col] = df[datetime_col].str.split(' - ').str[0]
     df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
-    return df
+    df = df.set_index(datetime_col)
+    df = df.resample('H').mean()
+    return df.reset_index()
 # End-of-file (EOF)
+
+def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=4):
+    """
+    Fill NaN values in a time series column with the mean of the same hour over the past n_days.
+    
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        datetime_col (str): Name of the timestamp column.
+        value_col (str): Name of the value column with NaNs to fill.
+        n_days (int): Number of previous days to average for filling (default: 4).
+    
+    Returns:
+        pd.DataFrame: A copy of the input DataFrame with NaNs in value_col filled.
+    """
+    df = df.copy()
+    
+    # Ensure timestamp is datetime and set index
+    df[datetime_col] = pd.to_datetime(df[datetime_col])
+    df = df.set_index(datetime_col)
+
+    # Extract date and hour
+    df['hour'] = df.index.hour
+    df['date'] = df.index.date
+
+    # Pivot: rows = date, columns = hour
+    pivot = df.pivot_table(values=value_col, index='date', columns='hour')
+
+    # Compute rolling mean across previous n_days
+    rolling_means = pivot.rolling(window=n_days, min_periods=1, center=True).mean()
+
+    # Function to apply per row
+    def fill_value(row):
+        if pd.isna(row[value_col]):
+            try:
+                return rolling_means.loc[row['date'], row['hour']]
+            except KeyError:
+                return np.nan
+        else:
+            return row[value_col]
+
+    # Apply filling logic
+    df[value_col] = df.reset_index().apply(fill_value, axis=1).values
+
+    # Drop helper columns
+    df.drop(columns=['hour', 'date'], inplace=True)
+
+    # Reset index to return to original format
+    return df.reset_index()
 
 def merge_df(dfs, on, how):
     """
@@ -110,4 +161,6 @@ def df_summary(df):
     print(df.isnull().sum())
     print("\nFirst Rows:")
     print(df.head())
+    print("\nLast Rows:")
+    print(df.tail())
     print("-" * 40)

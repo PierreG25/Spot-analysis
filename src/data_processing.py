@@ -55,7 +55,7 @@ def setup_time(df, datetime_col, format):
     return df.reset_index()
 # End-of-file (EOF)
 
-def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=4):
+def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=5):
     """
     Fill NaN values in a time series column with the mean of the same hour over the past n_days.
     

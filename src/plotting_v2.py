@@ -72,7 +72,7 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
         filtered.append(df.loc[mask])
     return pd.concat(filtered)
 
-########################################## Plots Functions ########################################################
+########################################## Plots Functions for prices visualization ########################################################
 
 ######### Time serie plot
 
@@ -200,3 +200,10 @@ def plot_heatmap(df, start_year, end_year, period, save_path):
     if save_path:
         plt.savefig(save_path)
     plt.show()
+
+
+########################################## Plots Functions for the influence of external variables ########################################################
+
+
+
+########################################## Plots Functions for anomalies ########################################################

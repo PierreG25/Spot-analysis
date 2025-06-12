@@ -34,7 +34,7 @@ def format_period(period, year):
     raise ValueError("Invalid period format")
 
 
-def ensure_datetime_index(df, datetime_col='MTU (CET/CEST)'):
+def ensure_datetime_index(df, datetime_col='Date'):
     """
     Ensure that the DataFrame has a datetime index named datetime_col.
 

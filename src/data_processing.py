@@ -27,7 +27,7 @@ def group_files_by_type(folder_path: str, types: List[str], extension: str = "")
 def load_dataframes(grouped_files: Dict[str, List[str]]) -> Dict[str, List[pd.DataFrame]]:
     dataframes = {}
     for dtype, files in grouped_files.items():
-        dfs = [pd.read_csv(f, na_values=['N/A', 'n/a', 'NA', '-', '']) for f in files]
+        dfs = [pd.read_csv(f, na_values=['N/A', 'n/a', 'NA', '-', '', 'n/e']) for f in files]
         dataframes[dtype] = dfs  # list of DataFrames, one per file
     return dataframes
 
@@ -36,6 +36,11 @@ def load_dataframes(grouped_files: Dict[str, List[str]]) -> Dict[str, List[pd.Da
 
 
 def drop_unecessary_columns(df, columns_to_drop):
+    return df.drop(columns=columns_to_drop)
+
+def keep_necessary_columns(df, columns_to_keep):
+    columns_names = df.columns
+    columns_to_drop = [col for col in columns_names if col not in columns_to_keep]
     return df.drop(columns=columns_to_drop)
 
 def rename_and_reoder_columns(df, new_order, new_names):
@@ -51,7 +56,7 @@ def setup_time(df, datetime_col, format):
     df[datetime_col] = df[datetime_col].str.split(' - ').str[0]
     df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
     df = df.set_index(datetime_col)
-    df = df.resample('H').mean()
+    df = df.resample('h').mean()
     return df.reset_index()
 # End-of-file (EOF)
 

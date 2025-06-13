@@ -51,9 +51,6 @@ def ensure_datetime_index(df, datetime_col='Date'):
 
 
 def rolling_mean(df, start, end, wd):
-    # mask = (df.index >= start) & (df.index < end)
-    # df_filtered = df[mask]
-    # daily_avg = df_filtered['Day-ahead Price (EUR/MWh)'].resample('D').mean()
     daily_avg = df['Day-ahead Price (EUR/MWh)'].loc[start:end].resample('D').mean()
     return daily_avg.rolling(window = wd, center = True).mean()
 

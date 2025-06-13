@@ -20,6 +20,7 @@ def plot_scatter_price_driver(df, start_year, end_year, x_col, y_col='Day-ahead 
     df = ensure_datetime_index(df)
     mask = (df.index >= start_year) & (df.index < end_year)
     df = df.loc[mask]
+
     fig, ax = plt.subplots(figsize=(12,6))
     sns.scatterplot(x=df[x_col], y=df[y_col], alpha=0.3, color='b')
     ax.set_xlabel(x_col.capitalize())
@@ -48,7 +49,7 @@ def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col
         print(feature)
         sns.scatterplot( x=df[feature], y=df[y_col], ax=axes[idx], alpha=0.2, color='m')
         axes[idx].set_title(f"{y_col} vs {feature}")
-        axes[idx].tick_params(axis='x', rotation=45)
+        axes[idx].tick_params(axis='x', rotation=30)
         axes[idx].set_xlabel(f'{feature} (MW)')
         axes[idx].grid(True, linestyle='--', alpha=0.5)
     
@@ -60,6 +61,26 @@ def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col
     if title:
         fig.suptitle(title, fontsize=16)
 
+    plt.show()
+
+
+def plot_price_by_binned_driver(df, start_year, end_year, col, price_col='Day-ahead Price (EUR/MWh)', bins=10):
+    df = ensure_datetime_index(df)
+    mask = (df.index >= start_year) & (df.index < end_year)
+    df = df.loc[mask]
+
+    df_temp = df[[col, price_col]].copy()
+    df_temp['bin'] = pd.cut(df_temp[col], bins=bins)
+    binned_means = df_temp.groupby('bin')[price_col].mean()
+
+    fig, ax=plt.subplots(figsize=(12,6))
+    binned_means.plot(kind='bar')
+    ax.set_title(f'Average {price_col.capitalize()} by Binned {col.capitalize()}')
+    ax.set_ylabel(f'{price_col.capitalize()} (€)')
+    ax.set_xlabel(f'{col.capitalize()} Bins')
+    ax.grid(axis='y')
+    fig.autofmt_xdate()
+    plt.tight_layout()
     plt.show()
 
 ######################## Multivariate Driver Screening ##########################

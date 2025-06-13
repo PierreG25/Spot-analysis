@@ -33,6 +33,7 @@ def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col
     df = ensure_datetime_index(df)
     mask = (df.index >= start_year) & (df.index < end_year)
     df = df.loc[mask]
+
     n_plots = len(columns)
     if n_plots == 0:
         print("No columns provided to plot.")
@@ -45,10 +46,11 @@ def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col
 
     for idx, feature in enumerate(columns):
         print(feature)
-        sns.scatterplot( x=df[feature], y=df[y_col], ax=axes[idx], alpha=0.2, color='b')
+        sns.scatterplot( x=df[feature], y=df[y_col], ax=axes[idx], alpha=0.2, color='m')
         axes[idx].set_title(f"{y_col} vs {feature}")
         axes[idx].tick_params(axis='x', rotation=45)
         axes[idx].set_xlabel(f'{feature} (MW)')
+        axes[idx].grid(True, linestyle='--', alpha=0.5)
     
     # Hide any unused subplots
     for j in range(n_plots, len(axes)):
@@ -61,5 +63,18 @@ def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col
     plt.show()
 
 ######################## Multivariate Driver Screening ##########################
+
+def plot_correlation_matrix(df, cols, start_year, end_year):
+    df = ensure_datetime_index(df)
+    mask = (df.index >= start_year) & (df.index < end_year)
+    df = df.loc[mask]
+
+    corr = df[cols].corr()
+    fig, ax = plt.subplots(figsize=(12,6))
+    sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f", square=True)
+    ax.set_title('Correlation matrix')
+    fig.autofmt_xdate()
+    plt.tight_layout()
+    plt.show()
 
 ######################## Model-Based Driver Importance ##########################

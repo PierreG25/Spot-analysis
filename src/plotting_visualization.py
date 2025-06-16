@@ -50,8 +50,8 @@ def ensure_datetime_index(df, datetime_col='Date'):
     return df
 
 
-def rolling_mean(df, start, end, wd):
-    daily_avg = df['Day-ahead Price (EUR/MWh)'].loc[start:end].resample('D').mean()
+def rolling_mean(df, col, start, end, wd):
+    daily_avg = df[col].loc[start:end].resample('D').mean()
     return daily_avg.rolling(window = wd, center = True).mean()
 
 
@@ -73,16 +73,16 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
 
 ######### Time serie plot
 
-def plot_smooth_prices(df, start, end, window_days, save_path):
+def plot_smooth_prices(df, start, end, window_days, save_path, col='Price'):
     df = ensure_datetime_index(df)
-    y = rolling_mean(df, start, end, window_days)
+    y = rolling_mean(df, col, start, end, window_days)
     x = y.index
 
     fig, ax = plt.subplots(figsize=(12,6))
 
     ax.plot(x, y)
     ax.set_xlabel('Dates')
-    ax.set_ylabel('Day-ahead prices (EUR/MWh)')
+    ax.set_ylabel(col)
     ax.set_title(f'Daily Average Electricity Prices ({start} - {end})\nwith {window_days}-Day Rolling Mean')
     ax.grid(True, linestyle='--', alpha=0.5)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
@@ -96,7 +96,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path):
 
 ######### Average hourly prices plot
 
-def plot_avg_hourly_prices(df, start_year, end_year, period, save_path):
+def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Price'):
     """
     Function plotting the average hourly day ahead prices over a certain period of time
     """
@@ -110,15 +110,15 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, save_path):
         mask = (df.index >= start) & (df.index < end)
         
         df_yearly = df[mask]
-        daily_avg = df_yearly.groupby('Hour')['Day-ahead Price (EUR/MWh)'].mean().reset_index()
+        daily_avg = df_yearly.groupby('Hour')[col].mean().reset_index()
 
         x = daily_avg['Hour']
-        y = daily_avg['Day-ahead Price (EUR/MWh)']
+        y = daily_avg[col]
         ax.step(x, y, where='post', label=str(year), alpha=0.8, color=palette[i])
         print(f'{year} OK')
 
     ax.set_xlabel('Hours')
-    ax.set_ylabel('Day-ahead prices (EUR/MWh)')
+    ax.set_ylabel(col)
     ax.set_title(f'Average day-ahead hourly prices ({start_year} - {end_year}) \nwithin {split_period(period)}')
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
@@ -130,7 +130,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, save_path):
 
 ######### Boxplot
 
-def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path):
+def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path, col='Price'):
     """
     Create boxplots of prices by day of the week, grouped by year.
 
@@ -146,7 +146,7 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path):
     df = extract_periodic_data(df, start_year, end_year, period)
 
     # Aggregate to daily average price
-    df_daily = df['Day-ahead Price (EUR/MWh)'].resample('D').mean().to_frame()
+    df_daily = df[col].resample('D').mean().to_frame()
     df_daily['weekday'] = df_daily.index.day_name()
     df_daily['year'] = df_daily.index.year
 
@@ -156,7 +156,7 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path):
 
     # Plot
     fig, ax = plt.subplots(figsize=(12, 6))
-    sns.boxplot(data=df_daily, x='weekday', y='Day-ahead Price (EUR/MWh)', hue='year')
+    sns.boxplot(data=df_daily, x='weekday', y=col, hue='year')
 
     ax.set_xlabel("Day of the Week")
     ax.set_ylabel("Average Daily Price (EUR/MWh)")
@@ -170,7 +170,7 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path):
 
 ######### Heat map
 
-def plot_heatmap(df, start_year, end_year, period, save_path):
+def plot_heatmap(df, start_year, end_year, period, save_path, col='Price'):
     # Convert to datetime and filter by year
     df = ensure_datetime_index(df)
     df_concat = extract_periodic_data(df, start_year, end_year, period)
@@ -180,7 +180,7 @@ def plot_heatmap(df, start_year, end_year, period, save_path):
 
     # Create pivot table of average prices
     heatmap_data = df_concat.pivot_table(
-        index='weekday', columns='hour', values='Day-ahead Price (EUR/MWh)', aggfunc='mean'
+        index='weekday', columns='hour', values=col, aggfunc='mean'
     )
 
     # Ensure correct weekday order

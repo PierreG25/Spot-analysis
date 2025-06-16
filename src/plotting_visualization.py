@@ -50,9 +50,13 @@ def ensure_datetime_index(df, datetime_col='Date'):
     return df
 
 
-def rolling_mean(df, col, start, end, wd):
-    daily_avg = df[col].loc[start:end].resample('D').mean()
+def rolling_mean(df, col, wd):
+    daily_avg = df[col].resample('D').mean()
     return daily_avg.rolling(window = wd, center = True).mean()
+
+def rolling_std(df, col, wd):
+    daily_avg = df[col].resample('D').mean()
+    return daily_avg.rolling(window = wd, center = True).std()
 
 
 def split_period(period):
@@ -60,6 +64,9 @@ def split_period(period):
         return f'{period[0]} - {period[1]}'
     return period
 
+def filter_data(df, start_date, end_date):
+    mask = (df.index >= start_date) & (df.index < end_date)
+    return df.loc[mask]
 
 def extract_periodic_data(df, start_year, end_year, filter_period):
     filtered = []
@@ -73,21 +80,33 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
 
 ######### Time serie plot
 
-def plot_smooth_prices(df, start, end, window_days, save_path, col='Price'):
+def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True):
     df = ensure_datetime_index(df)
-    y = rolling_mean(df, col, start, end, window_days)
+    df = filter_data(df, start, end)
+
+    y = rolling_mean(df, col, window_days)
     x = y.index
+    std=rolling_std(df, col, window_days)
+    upper_band = y + 2*std
+    lower_band = y - 2*std
+    print('ok')
 
     fig, ax = plt.subplots(figsize=(12,6))
 
-    ax.plot(x, y)
+    if raw_values is True:
+        ax.plot(df.index, df[col], label='Raw prices')
+    ax.plot(x, y, label='Smooth prices', color='r')
+    ax.plot(x, upper_band, color='gray', linestyle='--')
+    ax.plot(x, lower_band, color='gray', linestyle='--')
+    ax.fill_between(x, upper_band, lower_band, color='gray', alpha=0.4, label='Volatility bands')
     ax.set_xlabel('Dates')
     ax.set_ylabel(col)
     ax.set_title(f'Daily Average Electricity Prices ({start} - {end})\nwith {window_days}-Day Rolling Mean')
+    ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
-    fig.autofmt_xdate()
+    fig.autofmt_xdate()  
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)

@@ -115,17 +115,17 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
 ######### Price distribution
 
-def plot_price_dist(df, start_year, end_year, price_col='Price', bins=50):
+def plot_price_dist(df, start_year, end_year, price_col='Price', bins=20):
     df = ensure_datetime_index(df)
-    df = filter_data(df, start_year, end_year)
-    df
+    df = filter_data(df, start_year, end_year).reset_index()
 
-    df_temp = df[price_col].copy()
-    df_temp['bin'] = pd.cut(df_temp[price_col], bins=bins)
-    binned_dist = df_temp.groupby('bin')[price_col].count()
+    df['bin'] = pd.cut(df[price_col], bins=bins)
+    binned_dist = df.groupby('bin')[price_col].count()
+    print(type(binned_dist))
 
     fig, ax=plt.subplots(figsize=(12,6))
-    binned_dist.plot(kind='bar')
+    # binned_dist.plot(kind='bar')
+    ax.bar(binned_dist.index.astype(str), binned_dist.values)
     ax.set_title(f'Average {price_col.capitalize()} by Binned {price_col.capitalize()}')
     ax.set_ylabel(f'{price_col.capitalize()}')
     ax.set_xlabel(f'{price_col.capitalize()} Bins')

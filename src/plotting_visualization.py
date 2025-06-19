@@ -83,6 +83,7 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
 def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True):
     df = ensure_datetime_index(df)
     df = filter_data(df, start, end)
+    df['day'] = df.index.floor('D')
 
     y = rolling_mean(df, col, window_days)
     x = y.index
@@ -95,6 +96,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
     if raw_values is True:
         ax.plot(df.index, df[col], label='Raw prices')
+    print('OKK')
     ax.plot(x, y, label='Smooth prices', color='r')
     ax.plot(x, upper_band, color='gray', linestyle='--')
     ax.plot(x, lower_band, color='gray', linestyle='--')
@@ -110,6 +112,16 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(12,6))
+
+    sns.boxplot(x='day', y=col, data=df, showfliers=False, palette="coolwarm")
+    ax.set_title('Boxplot of Prices by Day of Month')
+    ax.grid(True, linestyle='--', alpha=0.5)
+    # ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    fig.autofmt_xdate()
     plt.show()
 
 

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
+from datetime import datetime, timedelta
 import mplfinance as mpf
 import pandas as pd
 
@@ -86,6 +87,13 @@ def extract_OHLC(df, col, index):
     )
     return df_OHLC
 
+def shift_date(date_str, x_days):
+    date_obj = datetime.strptime(date_str, '%Y/%m/%d')
+
+    shifted_date = date_obj + timedelta(days=x_days)
+
+    return shifted_date.strftime('%Y/%m/%d')
+
 ########################################## Plots Functions for prices visualization ########################################################
 
 ######### Time serie plot
@@ -127,15 +135,28 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
 
 def plot_smooth_prices2(df, start, end, window_days, save_path, col='Price', raw_values=True):
+    start_extended=shift_date(start, -window_days)
+    end_extended=shift_date(end, window_days)
+
+    print(start_extended)
+    print(end_extended)
+
     df = ensure_datetime_index(df)
-    df = filter_data(df, start, end)
+    df = filter_data(df, start_extended, end_extended)
     df['day'] = df.index.floor('D')
 
-    y = rolling_mean(df, col, window_days)
+    y = rolling_mean(df, col, window_days)[window_days:-(window_days-1)]
     x = y.index
-    std=rolling_std(df, col, window_days)
+    std=rolling_std(df, col, window_days)[window_days:-(window_days-1)]
     upper_band = y + 2*std
     lower_band = y - 2*std
+
+    print(len(x))
+    print(len(y))
+    print(len(upper_band))
+
+    df = filter_data(df, start, end)
+
     print('ok')
 
     fig, axs = plt.subplots(2,1, figsize=(16,10), sharex=True)
@@ -155,8 +176,8 @@ def plot_smooth_prices2(df, start, end, window_days, save_path, col='Price', raw
     axs[0].xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
 
     inverse_colors = mpf.make_marketcolors(
-    up="#d64543",    # Close > Open
-    down="#26a666",  # Close < Open
+    up="#d64543",    # Close < Open
+    down="#26a666",  # Close > Open
     edge='i', wick='i', volume='in'
 )
     inverse_style = mpf.make_mpf_style(

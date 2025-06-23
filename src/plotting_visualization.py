@@ -164,7 +164,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
     df_OHLC = extract_OHLC(df, col, 'day')
     mpf.plot(df_OHLC, type='candle', ax=axs[1], style=inverse_style, show_nontrading=True)
     axs[1].set_ylabel('Price (EUR/MWh)')
-    axs[1].set_title('Candlestick daily prices')
+    axs[1].set_title('Daily prices volatility')
     axs[1].yaxis.set_label_position("left")
     axs[1].yaxis.tick_left()
     axs[1].spines['right'].set_visible(False)

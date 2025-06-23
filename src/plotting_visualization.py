@@ -36,6 +36,17 @@ def format_period(period, year):
     raise ValueError("Invalid period format")
 
 
+def get_season(month):
+    if month in [12, 1, 2]:
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8]:
+        return 'Summer'
+    elif month in [9, 10, 11]:
+        return 'Autumn'
+    
+
 def ensure_datetime_index(df, datetime_col='Date'):
     """
     Ensure that the DataFrame has a datetime index named datetime_col.
@@ -99,42 +110,6 @@ def shift_date(date_str, x_days):
 ######### Time serie plot
 
 def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True):
-    df = ensure_datetime_index(df)
-    df = filter_data(df, start, end)
-    df['day'] = df.index.floor('D')
-
-    y = rolling_mean(df, col, window_days)
-    x = y.index
-    std=rolling_std(df, col, window_days)
-    upper_band = y + 2*std
-    lower_band = y - 2*std
-    print('ok')
-
-    fig, ax = plt.subplots(figsize=(12,6))
-
-    if raw_values is True:
-        ax.plot(df.index, df[col], label='Raw prices')
-    print('OKK')
-    ax.plot(x, y, label='Smooth prices', color='r')
-    ax.plot(x, upper_band, color='gray', linestyle='--')
-    ax.plot(x, lower_band, color='gray', linestyle='--')
-    ax.fill_between(x, upper_band, lower_band, color='gray', alpha=0.4, label='Volatility bands')
-    ax.set_xlabel('Dates')
-    ax.set_ylabel(col)
-    ax.set_title(f'Daily Average Electricity Prices ({start} - {end})\nwith {window_days}-Day Rolling Mean')
-    ax.legend()
-    ax.grid(True, linestyle='--', alpha=0.5)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
-    fig.autofmt_xdate()  
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
-    plt.show()
-
-
-
-def plot_smooth_prices2(df, start, end, window_days, save_path, col='Price', raw_values=True):
     start_extended=shift_date(start, -window_days)
     end_extended=shift_date(end, window_days)
 
@@ -298,6 +273,47 @@ def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path, col='P
     ax.set_title(f"Electricity Prices by Day of the Week ({start_year} - {end_year}) \nwithin {split_period(period)}")
     ax.legend(title="Year")
     ax.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+def boxplot(df, period, save_path, col='Price'):
+    df = ensure_datetime_index(df)
+    df = df[col].resample('D').mean().to_frame()    #Smooth out value to erase hourly outliers
+    df['year'] = df.index.year
+
+    if period=='weekdays':
+        df['weekday'] = df.index.day_name()
+        weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        df['weekday'] = pd.Categorical(df['weekday'], categories=weekday_order, ordered=True)
+        x_axis = 'weekday'
+        x_label = 'Weekdays'
+
+    elif period=='months':
+        df['month'] = df.index.month_name()
+        month_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        df['month'] = pd.Categorical(df['month'], categories=month_order, ordered=True)
+        x_axis = 'month'
+        x_label = 'Months'
+
+    elif period=='seasons':
+        df['season'] = df.index.month.map(get_season)
+        season_order = ['Spring', 'Summer', 'Autumn', 'Winter']
+        df['season'] = pd.Categorical(df['season'], season_order, ordered=True)
+        x_axis = 'season'
+        x_label = 'Seasons'
+
+    else:
+        raise ValueError('Wrong input, use weekdays, months, or seasons ')
+    
+    plt.figure(figsize=(12,6))
+    sns.boxplot(data=df, x=x_axis, y=col, hue='year')
+    plt.xlabel(x_label)
+    plt.ylabel('Price (EUR/MWh)')
+    plt.title('Electricity Prices')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)

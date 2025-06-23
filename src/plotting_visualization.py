@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
+import mplfinance as mpf
 import pandas as pd
 
 def format_period(period, year):
@@ -76,6 +77,15 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
         filtered.append(df.loc[mask])
     return pd.concat(filtered)
 
+def extract_OHLC(df, col, index):
+    df_OHLC = df.groupby(index).agg(
+        Open=(col,'first'),
+        High=(col, 'max'),
+        Low=(col, 'min'),
+        Close=(col,'last')
+    )
+    return df_OHLC
+
 ########################################## Plots Functions for prices visualization ########################################################
 
 ######### Time serie plot
@@ -114,15 +124,66 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
         plt.savefig(save_path)
     plt.show()
 
-    fig, ax = plt.subplots(figsize=(12,6))
 
-    sns.boxplot(x='day', y=col, data=df, showfliers=False, palette="coolwarm")
-    ax.set_title('Boxplot of Prices by Day of Month')
-    ax.grid(True, linestyle='--', alpha=0.5)
-    # ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+
+def plot_smooth_prices2(df, start, end, window_days, save_path, col='Price', raw_values=True):
+    df = ensure_datetime_index(df)
+    df = filter_data(df, start, end)
+    df['day'] = df.index.floor('D')
+
+    y = rolling_mean(df, col, window_days)
+    x = y.index
+    std=rolling_std(df, col, window_days)
+    upper_band = y + 2*std
+    lower_band = y - 2*std
+    print('ok')
+
+    fig, axs = plt.subplots(2,1, figsize=(16,10), sharex=True)
+
+    if raw_values is True:
+        axs[0].plot(df.index, df[col], label='Raw prices')
+    axs[0].plot(x, y, label='Smooth prices', color='r')
+    axs[0].plot(x, upper_band, linestyle='--', color='gray')
+    axs[0].plot(x, lower_band, linestyle='--', color='gray')
+    axs[0].fill_between(x, upper_band, lower_band, color='gray', alpha=0.4, label='Volatility bands')
+    axs[0].set_xlabel('Dates')
+    axs[0].set_ylabel('Price (EUR/MWh)')
+    axs[0].set_title(f'Daily Average Electricity Prices ({start} - {end})\nwith {window_days}-Day Rolling Mean')
+    axs[0].legend()
+    axs[0].grid(True, linestyle='--', alpha=0.5)
+    axs[0].xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
+    axs[0].xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
+
+    inverse_colors = mpf.make_marketcolors(
+    up="#d64543",    # Close > Open
+    down="#26a666",  # Close < Open
+    edge='i', wick='i', volume='in'
+)
+    inverse_style = mpf.make_mpf_style(
+    base_mpf_style='yahoo',
+    marketcolors=inverse_colors,
+    rc={'font.size': 10}
+)
+    # axs[1] = sns.boxplot(x='day', y=col, data=df, showfliers=False, color='#00CC96')
+    df_OHLC = extract_OHLC(df, col, 'day')
+    mpf.plot(df_OHLC, type='candle', ax=axs[1], style=inverse_style, show_nontrading=True)
+    axs[1].set_ylabel('Price (EUR/MWh)')
+    axs[1].set_title('Candlestick daily prices')
+    axs[1].yaxis.set_label_position("left")
+    axs[1].yaxis.tick_left()
+    axs[1].spines['right'].set_visible(False)
+    axs[1].spines['left'].set_visible(True)
+    axs[1].xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
+    axs[1].xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    axs[1].legend()
+    axs[1].grid(True, linestyle='--', alpha=0.5)
+    axs[1].grid(True, linestyle='--', alpha=0.5)
+
     fig.autofmt_xdate()
+    if save_path:
+        plt.savefig(save_path)
     plt.show()
+
 
 
 ######### Price distribution

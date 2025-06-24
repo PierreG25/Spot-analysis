@@ -109,7 +109,7 @@ def shift_date(date_str, x_days):
 
 ######### Time serie plot
 
-def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True):
+def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True, inversed_style=True):
     start_extended=shift_date(start, -window_days)
     end_extended=shift_date(end, window_days)
 
@@ -134,7 +134,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
     print('ok')
 
-    fig, axs = plt.subplots(2,1, figsize=(16,10), sharex=True)
+    fig, axs = plt.subplots(2,1, figsize=(14,8), sharex=True)
 
     if raw_values is True:
         axs[0].plot(df.index, df[col], label='Raw prices')
@@ -150,19 +150,22 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
     axs[0].xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
     axs[0].xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
 
-    inverse_colors = mpf.make_marketcolors(
-    up="#d64543",    # Close < Open
-    down="#26a666",  # Close > Open
-    edge='i', wick='i', volume='in'
-)
-    inverse_style = mpf.make_mpf_style(
-    base_mpf_style='yahoo',
-    marketcolors=inverse_colors,
-    rc={'font.size': 10}
-)
+    if inversed_style:
+        inverse_colors = mpf.make_marketcolors(
+        up="#b62826",    # Close < Open
+        down="#0d7541",  # Close > Open
+        edge='i', wick='i', volume='in'
+        )
+        candle_style = mpf.make_mpf_style(
+        base_mpf_style='yahoo',
+        marketcolors=inverse_colors,
+        rc={'font.size': 10}
+        )
+    else:
+        candle_style='charles'
     # axs[1] = sns.boxplot(x='day', y=col, data=df, showfliers=False, color='#00CC96')
     df_OHLC = extract_OHLC(df, col, 'day')
-    mpf.plot(df_OHLC, type='candle', ax=axs[1], style=inverse_style, show_nontrading=True)
+    mpf.plot(df_OHLC, type='candle', ax=axs[1], style=candle_style, show_nontrading=True)
     axs[1].set_ylabel('Price (EUR/MWh)')
     axs[1].set_title('Daily prices volatility')
     axs[1].yaxis.set_label_position("left")
@@ -176,6 +179,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
     axs[1].grid(True, linestyle='--', alpha=0.5)
 
     fig.autofmt_xdate()
+    plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
     plt.show()
@@ -240,45 +244,15 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Pri
 
 ######### Boxplot
 
-def plot_boxplots_by_weekday(df, start_year, end_year, period, save_path, col='Price'):
+def boxplot(df, period, save_path, col='Price'):
     """
-    Create boxplots of prices by day of the week, grouped by year.
+    Create boxplots of prices by either weekdays, months or seasons, grouped by year.
 
     Parameters:
     - df: pandas DataFrame with datetime and price columns
-    - start_year, end_year: int, range of years to include
     - datetime_column: str, name of datetime column
-    - price_column: str, name of price column
+    - col: str, name of price column, by default equal to 'Price'
     """
-
-    # Convert to datetime and filter by year
-    df = ensure_datetime_index(df)
-    df = extract_periodic_data(df, start_year, end_year, period)
-
-    # Aggregate to daily average price
-    df_daily = df[col].resample('D').mean().to_frame()
-    df_daily['weekday'] = df_daily.index.day_name()
-    df_daily['year'] = df_daily.index.year
-
-    # Ensure consistent weekday order
-    weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    df_daily['weekday'] = pd.Categorical(df_daily['weekday'], categories=weekday_order, ordered=True)
-
-    # Plot
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.boxplot(data=df_daily, x='weekday', y=col, hue='year')
-
-    ax.set_xlabel("Day of the Week")
-    ax.set_ylabel("Average Daily Price (EUR/MWh)")
-    ax.set_title(f"Electricity Prices by Day of the Week ({start_year} - {end_year}) \nwithin {split_period(period)}")
-    ax.legend(title="Year")
-    ax.grid(True, linestyle='--', alpha=0.5)
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
-    plt.show()
-
-def boxplot(df, period, save_path, col='Price'):
     df = ensure_datetime_index(df)
     df = df[col].resample('D').mean().to_frame()    #Smooth out value to erase hourly outliers
     df['year'] = df.index.year
@@ -307,12 +281,13 @@ def boxplot(df, period, save_path, col='Price'):
     else:
         raise ValueError('Wrong input, use weekdays, months, or seasons ')
     
-    plt.figure(figsize=(12,6))
-    sns.boxplot(data=df, x=x_axis, y=col, hue='year')
+    plt.figure(figsize=(16,6))
+    sns.boxplot(data=df, x=x_axis, y=col, hue='year', palette='Reds')
     plt.xlabel(x_label)
     plt.ylabel('Price (EUR/MWh)')
     plt.title('Electricity Prices')
     plt.legend()
+    plt.gcf().autofmt_xdate()
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     if save_path:

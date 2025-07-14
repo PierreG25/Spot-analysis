@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
@@ -6,8 +7,6 @@ import math
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.graphics.regressionplots import plot_partregress
-import matplotlib.pyplot as plt
-import seaborn as sns
 from plotting_visualization import *
 
 ######################## Helping functions ##########################

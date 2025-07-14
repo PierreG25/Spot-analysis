@@ -8,14 +8,14 @@ from plotting_visualization import *
 ######################## Helping functions ##########################
 
 cost_map = {
-    'solar': 2.5,
-    'wind': 2.5,
-    'nuclear': 10,
-    'hydro': 12.5,
-    'lignite': 37.5,
-    'hard coal': 50,
-    'natural gas': 75,
-    'fuel oil': 125
+    'Solar': 2.5,
+    'Wind': 2.5,
+    'Nuclear': 10,
+    'Hydro': 12.5,
+    'Lignite': 37.5,
+    'Hard coal': 50,
+    'Natural gas': 75,
+    'Fuel oil': 125
 }
 
 def marginal_costs(generation_type):
@@ -46,15 +46,35 @@ def plot_constant_func(x_start, x_end, value, generation_type):
 
 def merit_order_curve(df, date):
     df = ensure_datetime_index(df)
-    cost_map = {
-        'solar': 2.5,
-        'wind': 2.5,
-        'nuclear': 10,
-        'hydro': 12.5,
-        'lignite': 37.5,
-        'hard coal': 50,
-        'natural gas': 75,
-        'fuel oil': 125
-    }
-
+    df_merit = pd.DataFrame({
+        'technology': [],
+        'capacity': [],
+        'marginal costs': [],
+    })
     selected_row = df.loc[date,:]
+    for value in selected_row.index:
+        if value in cost_map:
+            new_row = {f'{value}', selected_row[value], marginal_costs(value)}
+            df_merit.loc[len(df_merit)] = new_row
+    
+    df_merit = df_merit.sort_values(by='marginal costs')
+    df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
+    df_merit['previous capacity'] = df_merit['cumulative capacity'] - df['capacity']
+
+    for i, row in df.iterrows():
+        plt.fill_between(
+            [row['previous capacity'], row['cumulative capacity']],
+            [row['marginal costs'], row['marginal costs']],
+            step='pre',
+            y2=0,
+            label=row['technology'],
+            alpha=0.7
+        )
+
+        plt.xlabel('Cumulative Capacity (MW)')
+        plt.ylabel('Marginal Cost (€/MWh)')
+        plt.title('Merit Order Curve')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()

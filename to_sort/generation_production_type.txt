@@ -1,0 +1,16 @@
+"Biomass - Actual Aggregated [MW]","Energy storage - Actual Aggregated [MW]","Fossil Brown coal/Lignite - Actual Aggregated [MW]",
+"Fossil Coal-derived gas - Actual Aggregated [MW]","Fossil Gas - Actual Aggregated [MW]","Fossil Hard coal - Actual Aggregated [MW]",
+"Fossil Oil - Actual Aggregated [MW]","Fossil Oil shale - Actual Aggregated [MW]","Fossil Peat - Actual Aggregated [MW]",
+"Geothermal - Actual Aggregated [MW]","Hydro Pumped Storage - Actual Aggregated [MW]","Hydro Pumped Storage - Actual Consumption [MW]",
+"Hydro Run-of-river and poundage - Actual Aggregated [MW]","Hydro Water Reservoir - Actual Aggregated [MW]","Marine - Actual Aggregated [MW]",
+"Nuclear - Actual Aggregated [MW]","Other - Actual Aggregated [MW]","Other renewable - Actual Aggregated [MW]","Solar - Actual Aggregated [MW]",
+"Waste - Actual Aggregated [MW]","Wind Offshore - Actual Aggregated [MW]","Wind Onshore - Actual Aggregated [MW]"
+
+solar = Solar
+wind = Wind Offshore + Wind Onshore
+nuclear = Nuclear
+hydro = Hydro pumped storage + hydro run-of-river and poundage + hydro water reservoir + Marine (?)
+lignite = Fossil brown coal/lignite 
+hard coal = Fossil hard coal + fossil coal-derived gas (?)
+natural gas = Fossil gas
+fuel oil = fossil oil + fossil oil shale

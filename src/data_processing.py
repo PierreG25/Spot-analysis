@@ -56,7 +56,6 @@ def setup_time(df, datetime_col, format):
     df = df.set_index(datetime_col)
     df = df.resample('h').mean()
     return df.reset_index()
-# End-of-file (EOF)
 
 def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=5):
     """
@@ -105,7 +104,6 @@ def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=5):
 
     # Reset index to return to original format
     return df.reset_index()
-
 
 def merge_df(dfs, on, how):
     """

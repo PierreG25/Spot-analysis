@@ -8,9 +8,11 @@
 
 solar = Solar
 wind = Wind Offshore + Wind Onshore
+
+renewable = Solar + Wind Offshore + Wind Onshore + Geothermal + Marine (negligeable)
 nuclear = Nuclear
-hydro = Hydro pumped storage + hydro run-of-river and poundage + hydro water reservoir + Marine (?)
+hydro = hydro run-of-river and poundage + hydro water reservoir + Hydro pumped storage (not generation)
 lignite = Fossil brown coal/lignite 
-hard coal = Fossil hard coal + fossil coal-derived gas (?)
-natural gas = Fossil gas
-fuel oil = fossil oil + fossil oil shale
+hard coal = Fossil hard coal 
+natural gas = Fossil gas + fossil coal-derived gas
+fuel oil = fossil oil + fossil oil shale + fossil peat

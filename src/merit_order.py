@@ -70,7 +70,7 @@ def merit_order_curve(df, date):
             label=row['technology']
         )
 
-    forecast_load = df.loc[date]['Load']
+    forecast_load = df.loc[date]['Forecasted load']
     marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
     spot_price = marginal_unit['marginal costs']
 
@@ -91,8 +91,8 @@ def merit_order_curve(df, date):
 
 
 def generation_tech_distrib(df1, start_year, end_year):
-
-    df1=filter_data(df1, start_year, end_year)
+    df1 = ensure_datetime_index(df1)    # To include in filter_data function
+    df1 = filter_data(df1, start_year, end_year)
 
     count_map = {
     'Renewables': 0,
@@ -103,68 +103,62 @@ def generation_tech_distrib(df1, start_year, end_year):
     'Natural gas': 0,
     'Fuel oil': 0
 }
-
-    for date in df1.index:    
+    print(df1.index)
+    for date in df1.index:
+        print(date)   
         df_merit = pd.DataFrame({
             'technology': [],
             'capacity': [],
             'marginal costs': [],
         })
         selected_row = df1.loc[date]
-        forecast_load = df1.loc[date]['Load']
+        forecast_load = df1.loc[date]['Forecasted load']
+        i=1
         for value in selected_row.index:
+            print(i)
+            # print(selected_row.index)
             if value in cost_map:
                 new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
                 df_merit.loc[len(df_merit)] = new_row
+            i+=1
         df_merit = df_merit.sort_values(by='marginal costs')
         df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
         df_merit['previous capacity'] = df_merit['cumulative capacity'] - df_merit['capacity']
-
+        if not (df_merit['cumulative capacity'] >= forecast_load).any():
+            raise ValueError(f'WARNING: forecasted load ({forecast_load}) is superior to the total capacity available ({df_merit['cumulative capacity'].iloc[-1]}) for {date}')
         marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
         marginal_tech = marginal_unit['technology']
 
         if marginal_tech in count_map:
             count_map[marginal_tech]+= 1
     
+    print(count_map)
+    # Total sum
     total = sum(count_map.values())
-    x_start = 0
-    colors = ['#6B6B6B', '#FF7F0E', '#8B0000', '#FDB813', '#00BFFF', "#2BFF00", "#EA00FF"]
 
-    fig = go.Figure()
+    # Step 1: Assign equal widths to all categories (or vary if needed)
+    n = len(count_map)
+    equal_width = 1.0 / n  # Total width is 1
+    widths = [equal_width] * n
 
-    # Compute rectangles with width × height = area share
-    for i, (tech, count) in enumerate(count_map.items()):
-        height = marginal_costs(tech)
-        if height == 0:
-            continue  # skip if height is 0 to avoid division by zero
-        area = count / total
-        width = area / height * 100  # scale for display
-        fig.add_shape(
-            type='rect',
-            x0=x_start,
-            x1=x_start + width,
-            y0=0,
-            y1=height,
-            fillcolor='colors[i]',
-            line=dict(width=1, color='black')
-        )
-        fig.add_annotation(
-            x=x_start + width / 2,
-            y=height + 3,
-            text=f"{tech}<br>{count}x",
-            showarrow=False,
-            font=dict(size=11)
-        )
-        x_start += width
+    # Step 2: Compute areas (value %) and corresponding heights
+    areas = [v / total for v in count_map.values()]
+    heights = [area / w for area, w in zip(areas, widths)]
 
-    fig.update_layout(
-        title="Mekko Chart – Area ∝ Frequency Tech Sets Spot Price",
-        xaxis=dict(title="Width (Scaled)", showgrid=False, zeroline=False),
-        yaxis=dict(title="Marginal Cost (€/MWh)", showgrid=True, zeroline=False),
-        width=900,
-        height=500
-    )
+    # Step 3: Plot
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    fig.show()
+    left = 0
+    for (label, area, width, height) in zip(count_map.keys(), areas, widths, heights):
+        rect = plt.Rectangle((left, 0), width, height, label=f"{label} ({area*100:.1f}%)")
+        ax.add_patch(rect)
+        # Add label inside rectangle
+        ax.text(left + width/2, height/2, label, ha='center', va='center', color='white', fontsize=9)
+        left += width
 
-    
+    # Adjust plot
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, max(heights)*1.1)
+    ax.axis('off')
+    plt.title("Mekko Chart of Generation Technologies (by % of Count)")
+    plt.show()

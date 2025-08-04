@@ -6,9 +6,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotting_visualization import *
 
-######################## Helping functions ##########################
+# =================== Helping functions ===================
 
-cost_map = {
+COST_MAP = {
     'Renewables': 1,
     'Hydro': 5,
     'Nuclear': 10,
@@ -19,7 +19,7 @@ cost_map = {
 }
 
 energy_colors = {
-    "Renewable": "#2ca02c",
+    "Renewables": "#2ca02c",
     "Hydro": "#1f77b4",
     "Nuclear": "#ffcc00",
     "Lignite": "#8c564b",
@@ -31,8 +31,8 @@ energy_colors = {
 
 def marginal_costs(generation_type):
 
-    if generation_type in cost_map:
-        return cost_map[generation_type]
+    if generation_type in COST_MAP:
+        return COST_MAP[generation_type]
     raise ValueError("Wrong input; use the generation technologies from the following list:" \
                     " solar, wind, nuclear, hydro, lignite, hard coal, natural gas, and fuel oil")
 
@@ -89,20 +89,31 @@ def plot_donut(map_data, threshold_pct=3):
     plt.tight_layout()
     plt.show()
 
-######################## Merit order curve ##########################
+# =================== Merit order curve ====================
 
 def merit_order_curve(df, date):
+    """
+    Plot the merit order curve for a specific date and highlights 
+    the price induced by the forecated load
+
+    Args: 
+        df (pd.DataFrame): DataFrame containing the columns within this list: 
+        Date, Price, Forecasted Load, Load, Renewables, Hydro, Nuclear, Lignite, Hard coal, Natural gas, Fuel Oil
+        date (str): date in the following format yyyy-mm-dd hh:m:ss
+    """
+
     df = ensure_datetime_index(df)
-    df_merit = pd.DataFrame({
-        'technology': [],
-        'capacity': [],
-        'marginal costs': [],
-    })
     selected_row = df.loc[date]
-    for value in selected_row.index:
-        if value in cost_map:
-            new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
-            df_merit.loc[len(df_merit)] = new_row
+    rows = []
+    for tech in selected_row.index:
+        if tech in COST_MAP:
+            rows.append({
+                'technology': tech,
+                'capacity': selected_row[tech],
+                'marginal costs': marginal_costs(tech)
+            })
+    df_merit = pd.DataFrame(rows)
+
     df_merit = df_merit.sort_values(by='marginal costs')
     df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
     df_merit['previous capacity'] = df_merit['cumulative capacity'] - df_merit['capacity']
@@ -114,17 +125,21 @@ def merit_order_curve(df, date):
             [row['marginal costs'], row['marginal costs']],
             step='pre',
             y2=0,
-            label=row['technology']
+            label=row['technology'],
+            color=energy_colors.get(row['technology'], 'gray')
         )
 
     forecast_load = df.loc[date]['Forecasted load']
+    if pd.isna(forecast_load):
+        raise ValueError('Forecasted load is missing for the selected date. \
+                         Becareful for time change')
     merit_order_limit = df_merit.iloc[-1,3] < forecast_load
     if merit_order_limit:
         print('SUP')
         marginal_unit = df_merit.iloc[-1]
         spot_price = marginal_unit['marginal costs']
         forecast_load = marginal_unit['cumulative capacity']    # This a bordeline case (Load > supply), thus we consider the last technology 
-                                                                #to set the price and to plot we affect the load as the the total cumulative capacity 
+                                                                #to set the price, for plotting we affect the load as the the total cumulative capacity
     else:
         print('INF')
         marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
@@ -173,7 +188,7 @@ def generation_tech_distrib(df1, start_year, end_year):
         for value in selected_row.index:
             print(i)
             # print(selected_row.index)
-            if value in cost_map:
+            if value in COST_MAP:
                 new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
                 df_merit.loc[len(df_merit)] = new_row
             i+=1
@@ -226,90 +241,18 @@ def generation_tech_distrib(df1, start_year, end_year):
     plt.show()
 
 
-def donut_tech_dist_v1(df, start_year, end_year):
-    df = ensure_datetime_index(df)    # To include in filter_data function
-    df = filter_data(df, start_year, end_year)
-
-    count_map = {
-    'Renewables': 0,
-    'Hydro': 0,
-    'Nuclear': 0,
-    'Lignite': 0,
-    'Hard coal': 0,
-    'Natural gas': 0,
-    'Fuel oil': 0
-}
-    
-    for date in df.index:
-        print(date)   
-        df_merit = pd.DataFrame({
-            'technology': [],
-            'capacity': [],
-            'marginal costs': [],
-        })
-        selected_row = df.loc[date]
-        forecast_load = selected_row['Forecasted load']
-
-        i=1
-        for value in selected_row.index:
-            # print(i)
-            # print(selected_row.index)
-            if value in cost_map:
-                new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
-                df_merit.loc[len(df_merit)] = new_row
-            i+=1
-        df_merit = df_merit.sort_values(by='marginal costs')
-        df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
-        df_merit['previous capacity'] = df_merit['cumulative capacity'] - df_merit['capacity']
-        print(df_merit)
-
-        merit_order_limit = df_merit.iloc[-1,3] < forecast_load
-        print(forecast_load)
-        if merit_order_limit:
-            # raise ValueError(f'WARNING: forecasted load ({forecast_load}) is 
-            # superior to the total capacity available ({df_merit['cumulative capacity'].iloc[-1]}) for {date}')
-            marginal_unit = df_merit.iloc[-1]
-            print(marginal_unit)
-            marginal_tech = marginal_unit['technology']
-            print('OK')
-        else: 
-            print(df_merit[df_merit['cumulative capacity'] >= forecast_load])
-            marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
-            marginal_tech = marginal_unit['technology']
-
-        if marginal_tech in count_map:
-            count_map[marginal_tech]+= 1
-        print('OUIIIII')
-        print(count_map)
-    
-    print(count_map)
-
-    # Extract labels and values
-    labels = list(count_map.keys())
-    sizes = list(count_map.values())
-
-    # Create pie chart
-    fig, ax = plt.subplots()
-    wedges, texts, autotexts = ax.pie(
-        sizes,
-        labels=labels,
-        autopct='%1.1f%%',
-        startangle=90,
-        wedgeprops=dict(width=0.3),  # This makes it a donut (hollow pie)
-            pctdistance=0.85,  # moves percentage toward center of wedge
-        textprops=dict(color="k", weight="bold")
-    )
-
-    # Equal aspect ratio ensures that pie is drawn as a circle
-    ax.axis('equal')
-
-    plt.title('Energy Capacity by Source')
-    plt.tight_layout()
-    plt.show()
-
-
-
 def donut_tech_dist(df, start_year, end_year):
+    """
+    Analzye which energy technoglogies are setting the price for each hour.\
+    Plot a donut chart with the preponderant energy sources within the considered period
+
+    Args: 
+        df (pd.DataFrame): DataFrame containing the columns within the following list: 
+        Date, Price, Forecasted Load, Load, Renewables, Hydro, Nuclear, Lignite, Hard coal, Natural gas, Fuel Oil
+        start_year (str): beginning of the period (included)
+        end_yeat (str): end of the period (excluded)
+    """
+    
     df = ensure_datetime_index(df)    # To include in filter_data function
     df = filter_data(df, start_year, end_year)
     exceed_supply=0
@@ -335,7 +278,7 @@ def donut_tech_dist(df, start_year, end_year):
 
         for value in selected_row.index:
 
-            if value in cost_map:
+            if value in COST_MAP:
                 new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
                 df_merit.loc[len(df_merit)] = new_row
 

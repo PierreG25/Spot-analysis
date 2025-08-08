@@ -6,9 +6,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotting_visualization import *
 
-# =================== Helping functions ===================
+# =================== HELPING FUNCTIONS ===================
 
-COST_MAP = {
+# Marginal costs
+COST_MAP = {    
     'Renewables': 1,
     'Hydro': 5,
     'Nuclear': 10,
@@ -18,7 +19,7 @@ COST_MAP = {
     'Fuel oil': 125
 }
 
-energy_colors = {
+ENERGY_COLORS = {
     "Renewables": "#2ca02c",
     "Hydro": "#1f77b4",
     "Nuclear": "#ffcc00",
@@ -29,28 +30,42 @@ energy_colors = {
     "Others": "#d3d3d3"
 }
 
-def marginal_costs(generation_type):
 
-    if generation_type in COST_MAP:
-        return COST_MAP[generation_type]
+def marginal_costs(generation_type,cost_map):
+    """
+    Check if the energy is within the dictionary and return the associated marginal cost
+
+    Args:
+        generation_type (str):
+        cost_map (dict): Marginal costs for each energy technology
+
+    Returns:
+        float: marginal cost of the selected energy technology
+    """
+
+    if generation_type in cost_map:
+        return cost_map[generation_type]
     raise ValueError("Wrong input; use the generation technologies from the following list:" \
                     " solar, wind, nuclear, hydro, lignite, hard coal, natural gas, and fuel oil")
 
 
-def plot_constant_func(x_start, x_end, value, generation_type):
-    x = [x_start, x_end]
-    y = np.full_like(x, value)
-
-    plt.plot(x, y, label=f'{generation_type}')
-    plt.fill_between(x, y, 0)
-    plt.xlabel('Generation type tech')
-    plt.ylabel('Spot prices (EUR/MWh)')
-    plt.title('Merit Order Curve')
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.5)
-
-
 def plot_donut(map_data, threshold_pct=3):
+    """
+    Plot a filtered donut chart showing the predominant values in the data.
+
+    Values whose percentage contribution is below the given threshold are
+    grouped into a single slice labeled "Others".
+
+    Args:
+        map_data (dict): A dictionary where keys are category names (str) and
+            values are their corresponding numerical amounts (int or float).
+        threshold_pct (int or float): Percentage threshold below which
+            categories are consolidated into the "Others" slice.
+            Defaults to 3.
+
+    Returns:
+        None
+    """
     total = sum(map_data.values())
     threshold_value = total * (threshold_pct / 100)
 
@@ -64,8 +79,8 @@ def plot_donut(map_data, threshold_pct=3):
     labels = list(large.keys())
     sizes = list(large.values())
 
-    # Colors (repeating if necessary)
-    colors = [energy_colors[energy] for energy in labels]
+    # Colors
+    colors = [ENERGY_COLORS[energy] for energy in labels]
 
     def autopct(pct):
         return f'{pct:.1f}%' if pct > threshold_pct else ''
@@ -89,28 +104,54 @@ def plot_donut(map_data, threshold_pct=3):
     plt.tight_layout()
     plt.show()
 
-# =================== Merit order curve ====================
+
+# =================== MERIT ORDER CURVE ====================
 
 def merit_order_curve(df, date):
     """
-    Plot the merit order curve for a specific date and highlights 
-    the price induced by the forecated load
+    Plot the merit order curve for a specific date and highlight the price 
+    corresponding to the forecasted load.
 
-    Args: 
-        df (pd.DataFrame): DataFrame containing the columns within this list: 
-        Date, Price, Forecasted Load, Load, Renewables, Hydro, Nuclear, Lignite, Hard coal, Natural gas, Fuel Oil
-        date (str): date in the following format yyyy-mm-dd hh:m:ss
+    Simplifications & Assumptions:
+        - Imports and exports of electricity are excluded from the analysis
+        - Marginal costs are assumed constant for each generation technology
+          due to limited data granularity
+        - Actual available capacities are used for each generation technology,
+          not D-1 forecasted capacities
+        - If forecasted load exceeds total available supply at that time,
+          the price is set based on the marginal cost of the last available
+          generation source at its maximum capacity
+
+    Args:
+        df (pd.DataFrame): DataFrame containing at least the following columns:
+            - 'Date'
+            - 'Price'
+            - 'Forecasted Load'
+            - 'Load'
+            - 'Renewables'
+            - 'Hydro'
+            - 'Nuclear'
+            - 'Lignite'
+            - 'Hard coal'
+            - 'Natural gas'
+            - 'Fuel Oil'
+        date (str): Target date and time in the format "YYYY-MM-DD HH:MM:SS".
+
+    Returns:
+        None
     """
 
     df = ensure_datetime_index(df)
     selected_row = df.loc[date]
+
+    # New DataFrame to analyse the merit order effect
     rows = []
     for tech in selected_row.index:
         if tech in COST_MAP:
             rows.append({
                 'technology': tech,
                 'capacity': selected_row[tech],
-                'marginal costs': marginal_costs(tech)
+                'marginal costs': marginal_costs(tech, COST_MAP)
             })
     df_merit = pd.DataFrame(rows)
 
@@ -118,6 +159,7 @@ def merit_order_curve(df, date):
     df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
     df_merit['previous capacity'] = df_merit['cumulative capacity'] - df_merit['capacity']
 
+    # Create a figure with wide rectangular for the merit order plot
     plt.figure(figsize=(12, 6))
     for i, row in df_merit.iterrows():
         plt.fill_between(
@@ -126,25 +168,29 @@ def merit_order_curve(df, date):
             step='pre',
             y2=0,
             label=row['technology'],
-            color=energy_colors.get(row['technology'], 'gray')
+            color=ENERGY_COLORS.get(row['technology'], 'gray')
         )
 
     forecast_load = df.loc[date]['Forecasted load']
+
+    #Test to see missing data in the load column (be careful for time change)
     if pd.isna(forecast_load):
         raise ValueError('Forecasted load is missing for the selected date. \
                          Becareful for time change')
-    merit_order_limit = df_merit.iloc[-1,3] < forecast_load
+    
+    # Test if forecasted load > supply (i.e max capacity)
+    merit_order_limit = forecast_load > df_merit.iloc[-1,3]
     if merit_order_limit:
-        print('SUP')
+
         marginal_unit = df_merit.iloc[-1]
         spot_price = marginal_unit['marginal costs']
-        forecast_load = marginal_unit['cumulative capacity']    # This a bordeline case (Load > supply), thus we consider the last technology 
-                                                                #to set the price, for plotting we affect the load as the the total cumulative capacity
+        forecast_load = marginal_unit['cumulative capacity']    
     else:
-        print('INF')
+
         marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
         spot_price = marginal_unit['marginal costs']
-        
+    
+    # Draw lines to highlight the marginal unit and electricity price
     x_intersect = forecast_load
     y_intersect = spot_price
 
@@ -160,6 +206,86 @@ def merit_order_curve(df, date):
     plt.tight_layout()
     plt.show()
 
+
+def donut_tech_dist(df, start_year, end_year):
+    """
+    Analyze which energy technologies set the market price in the given period
+    and plot a donut chart showing their relative share.
+
+    Args: 
+        df (pd.DataFrame): DataFrame containing at least the following columns:
+            - 'Date'
+            - 'Price'
+            - 'Forecasted Load'
+            - 'Load'
+            - 'Renewables'
+            - 'Hydro'
+            - 'Nuclear'
+            - 'Lignite'
+            - 'Hard coal'
+            - 'Natural gas'
+            - 'Fuel Oil'
+        start_year (str): Start year (inclusive) in 'YYYY' format
+        end_yeat (str): End year (exclusive) in 'YYYY' format
+    
+    Returns:
+        None
+    """
+
+    df = ensure_datetime_index(df)    # To include in filter_data function
+    df = filter_data(df, start_year, end_year)
+    exceed_supply = 0   # Number of occurences where load > supply
+
+    count_map = {
+    'Renewables': 0,
+    'Hydro': 0,
+    'Nuclear': 0,
+    'Lignite': 0,
+    'Hard coal': 0,
+    'Natural gas': 0,
+    'Fuel oil': 0
+}
+    
+    for date in df.index: 
+        selected_row = df.loc[date]
+        forecast_load = selected_row['Forecasted load']
+
+        # New DataFrame to analyse the merit order effect
+        rows = []
+        for tech in selected_row.index:
+            if tech in COST_MAP:
+                rows.append({
+                    'technology': tech,
+                    'capacity': selected_row[tech],
+                    'marginal costs': marginal_costs(tech, COST_MAP)
+                })
+        df_merit = pd.DataFrame(rows)
+
+        df_merit = df_merit.sort_values(by='marginal costs')
+        df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
+
+        # Test if forecasted load > supply (i.e max capacity)
+        merit_order_limit = forecast_load > df_merit.iloc[-1,3]
+        if merit_order_limit:
+
+            marginal_unit = df_merit.iloc[-1]
+            marginal_tech = marginal_unit['technology']     # Last available source at its max capacitiy set the price
+            exceed_supply+=1
+        else: 
+            marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
+            marginal_tech = marginal_unit['technology']
+
+        if marginal_tech in count_map:
+            count_map[marginal_tech]+= 1
+    
+    print(count_map)
+    print(exceed_supply)
+
+    plot_donut(count_map)
+
+
+
+# ===================== UNFINISHED MEKKO CHART ===================== 
 
 def generation_tech_distrib(df1, start_year, end_year):
     df1 = ensure_datetime_index(df1)    # To include in filter_data function
@@ -189,7 +315,7 @@ def generation_tech_distrib(df1, start_year, end_year):
             print(i)
             # print(selected_row.index)
             if value in COST_MAP:
-                new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
+                new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value, COST_MAP)}
                 df_merit.loc[len(df_merit)] = new_row
             i+=1
         df_merit = df_merit.sort_values(by='marginal costs')
@@ -239,66 +365,3 @@ def generation_tech_distrib(df1, start_year, end_year):
     ax.axis('off')
     plt.title("Mekko Chart of Generation Technologies (by % of Count)")
     plt.show()
-
-
-def donut_tech_dist(df, start_year, end_year):
-    """
-    Analzye which energy technoglogies are setting the price for each hour.\
-    Plot a donut chart with the preponderant energy sources within the considered period
-
-    Args: 
-        df (pd.DataFrame): DataFrame containing the columns within the following list: 
-        Date, Price, Forecasted Load, Load, Renewables, Hydro, Nuclear, Lignite, Hard coal, Natural gas, Fuel Oil
-        start_year (str): beginning of the period (included)
-        end_yeat (str): end of the period (excluded)
-    """
-    
-    df = ensure_datetime_index(df)    # To include in filter_data function
-    df = filter_data(df, start_year, end_year)
-    exceed_supply=0
-
-    count_map = {
-    'Renewables': 0,
-    'Hydro': 0,
-    'Nuclear': 0,
-    'Lignite': 0,
-    'Hard coal': 0,
-    'Natural gas': 0,
-    'Fuel oil': 0
-}
-    
-    for date in df.index: 
-        df_merit = pd.DataFrame({
-            'technology': [],
-            'capacity': [],
-            'marginal costs': [],
-        })
-        selected_row = df.loc[date]
-        forecast_load = selected_row['Forecasted load']
-
-        for value in selected_row.index:
-
-            if value in COST_MAP:
-                new_row = {'technology': f'{value}','capacity': selected_row[value],'marginal costs': marginal_costs(value)}
-                df_merit.loc[len(df_merit)] = new_row
-
-        df_merit = df_merit.sort_values(by='marginal costs')
-        df_merit['cumulative capacity'] = df_merit['capacity'].cumsum()
-
-        merit_order_limit = df_merit.iloc[-1,3] < forecast_load     # Test to know if demand exceed supply, meaning if our current data and model are not enough to model correctly the electricity market
-        if merit_order_limit:
-
-            marginal_unit = df_merit.iloc[-1]
-            marginal_tech = marginal_unit['technology']
-            exceed_supply+=1
-        else: 
-            marginal_unit = df_merit[df_merit['cumulative capacity'] >= forecast_load].iloc[0]
-            marginal_tech = marginal_unit['technology']
-
-        if marginal_tech in count_map:
-            count_map[marginal_tech]+= 1
-    
-    print(count_map)
-    print(exceed_supply)
-
-    plot_donut(count_map)

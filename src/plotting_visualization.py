@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import mplfinance as mpf
 import pandas as pd
 
+# ================================= HELPING FUNCTIONS =================================
+
 def format_period(period, year):
     """
     Concatenate a period with a respective year.
@@ -36,52 +38,150 @@ def format_period(period, year):
     raise ValueError("Invalid period format")
 
 
-def get_season(month):
+def get_season(month: int) -> str:
+    """
+    Return the season for a given month number
+
+    Args:
+        month (int): Month number
+
+    Returns:
+        str: Name of the season
+    """
+    if month not in range(1, 13):
+        raise ValueError("Month must be an integer between 1 and 12.")
+    
     if month in [12, 1, 2]:
         return 'Winter'
     elif month in [3, 4, 5]:
         return 'Spring'
     elif month in [6, 7, 8]:
         return 'Summer'
-    elif month in [9, 10, 11]:
+    else:
         return 'Autumn'
     
 
-def ensure_datetime_index(df, datetime_col='Date'):
+def ensure_datetime_index(df: pd.DataFrame, datetime_col: str ="Date") -> pd.DataFrame:
     """
-    Ensure that the DataFrame has a datetime index named datetime_col.
+    Ensure that the DataFrame has a datetime index named datetime_col
 
     Args:
-        df (pd.DataFrame): Input DataFrame.
-        datetime_col (str): Name of the datetime column to set as index if not already.
+        df (pd.DataFrame): Input DataFrame
+        datetime_col (str): Name of the datetime column to set as index if not already
 
     Returns:
-        pd.DataFrame: DataFrame indexed by datetime_col.
+        pd.DataFrame: DataFrame indexed by datetime_col
     """
     if df.index.name != datetime_col:
         df = df.set_index(datetime_col)
     return df
 
 
-def rolling_mean(df, col, wd):
+def rolling_mean(df: pd.DataFrame, col: str, wd: int) -> pd.Series:
+    """
+    Compute a centered rolling mean over a daily resampled version of a column
+
+    Args:
+        df (pd.DataFrame): Input DataFrame with a datetime index
+        col (str): Name of the column to compute the rolling mean on
+        wd (int): Size of the rolling window (in days)
+    
+    Returns:
+        pd.Series: A Series containing the smoothed daily values
+
+    Notes:
+        - The DataFrame contains a DatetimeIndex
+    """
     daily_avg = df[col].resample('D').mean()
     return daily_avg.rolling(window = wd, center = True).mean()
 
+
 def rolling_std(df, col, wd):
+    """
+    Compute a centered rolling standard deviation over a daily resampled version of a column
+
+    Args:
+        df (pd.DataFrame): Input DataFrame with a DatetimeIndex
+        col (str): Name of the column to compute the rolling mean on
+        wd (int): Size of the rolling window (in days)
+    
+    Returns:
+        pd.Series: A Series containing the smoothed daily standard deviation values
+
+    Notes:
+        - The DataFrame contains a DatetimeIndex
+    """
     daily_avg = df[col].resample('D').mean()
     return daily_avg.rolling(window = wd, center = True).std()
 
 
-def split_period(period):
+def split_period(period) -> str:
+    """
+    Convert a period value into a string representation
+
+    If the input is a tuple (start, end), it returns a string formatted as "start - end".
+    Otherwise, it returns the input unchanged
+
+    Args:
+        period (tuple or str): The period to process. Typically either:
+            - A tuple (start, end) representing the range
+            - A preformatted string
+    
+    Returns:
+        str: String representation of the period
+    """
     if isinstance(period,tuple):
         return f'{period[0]} - {period[1]}'
     return period
 
+
 def filter_data(df, start_date, end_date):
+    """
+    Filter a DataFrame to include only rows within a specified date range
+
+    The DataFrame must have a DatetimeIndex. Rows with the index values greater than
+    or equal to 'start_date' and strictly less than 'end_date' are included
+
+    Args:
+        df (pd.DataFrame): Input DataFrame with DatetimeIndex
+        start_date (str or pd.Timestamp): Start date of the filtering range (inclusive)
+        end_date (str or pd>Timestamp): End date of the filtering range (exclusive)
+    
+    Returns:
+        pd.DataFrame: Filtered DataFrame
+
+    Notes:
+        - The DataFrame contains a DatetimeIndex
+    """
     mask = (df.index >= start_date) & (df.index < end_date)
     return df.loc[mask]
 
+
 def extract_periodic_data(df, start_year, end_year, filter_period):
+    """
+    Extract and concatenate data slices from a DataFrame for repeated periods over
+    multiple years
+
+    For each year in [start_year, end_year], this function:
+        - Uses `filter_period` and the year to get start and end dates (via `format_period`)
+        - Filters the DataFrame for that period
+        - Collects the filtered slices and concatenates them
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame with a DatetimeIndex
+        start_year (int): First year (inclusive)
+        end_year (int): Last year (inclusive)
+        filter_period (str or tuple of str):
+            - If str, must be one of ['spring', 'summer', 'autumn', 'winter']
+            - If tuple, should be (start_MM-DD, end_MM-DD)
+
+    Returns:
+        pd.DataFrame: Concatenated DataFrame containing filtered data for all
+            specified years
+    
+    Notes:
+        - The DataFrame contains a DatetimeIndex
+    """
     filtered = []
     for year in range(start_year, end_year + 1):
         start_date, end_date = format_period(filter_period, year)
@@ -89,7 +189,20 @@ def extract_periodic_data(df, start_year, end_year, filter_period):
         filtered.append(df.loc[mask])
     return pd.concat(filtered)
 
+
 def extract_OHLC(df, col, index):
+    """
+    Extract OHLC (Open, High, Low, Close) aggreagated values for a specified column,
+    goruped by the given index
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        col (str): Name of the column to aggregate
+        index (str): Name of the column or index level to grouo by
+
+    Returns:
+        pd.DataFrame: DataFrame with columns ['Open', 'High', 'Low', 'Close] indexed by index
+    """
     df_OHLC = df.groupby(index).agg(
         Open=(col,'first'),
         High=(col, 'max'),
@@ -98,16 +211,28 @@ def extract_OHLC(df, col, index):
     )
     return df_OHLC
 
-def shift_date(date_str, x_days):
-    date_obj = datetime.strptime(date_str, '%Y/%m/%d')
 
+def shift_date(date, x_days):
+    """
+    Sift a date string by a specified number of days
+
+    Args:
+        date (str): Date string in the format 'YYYY/MM/DD'
+        x_days (int): Number of days to shift the date by (can be negative)
+    
+    Returns:
+        str: New date sring shifted by x_days
+    """
+    date_obj = datetime.strptime(date, '%Y/%m/%d')
+    # Shift the date by x_days using timedelta
     shifted_date = date_obj + timedelta(days=x_days)
-
+    # Format the shifted date back into string
     return shifted_date.strftime('%Y/%m/%d')
 
-########################################## Plots Functions for prices visualization ########################################################
 
-######### Time serie plot
+# ================================= PRICES VISUALIZATION =================================
+
+# ============= Time serie plot
 
 def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True, inversed_style=True):
     start_extended=shift_date(start, -window_days)
@@ -186,7 +311,7 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
 
 
-######### Price distribution
+# ============= Price distribution
 
 def plot_price_dist(df, start_year, end_year, price_col='Price', bins=20):
     df = ensure_datetime_index(df)
@@ -208,7 +333,7 @@ def plot_price_dist(df, start_year, end_year, price_col='Price', bins=20):
     plt.show()
 
 
-######### Average hourly prices plot
+# ============= Average hourly prices plot
 
 def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Price'):
     """
@@ -242,7 +367,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Pri
     plt.show()
 
 
-######### Boxplot
+# ============= Boxplot
 
 def boxplot(df, period, save_path, col='Price'):
     """
@@ -294,7 +419,7 @@ def boxplot(df, period, save_path, col='Price'):
         plt.savefig(save_path)
     plt.show()
 
-######### Heat map
+# ============= Heat map
 
 def plot_heatmap(df, start_year, end_year, period, save_path, col='Price'):
     # Convert to datetime and filter by year
@@ -323,10 +448,3 @@ def plot_heatmap(df, start_year, end_year, period, save_path, col='Price'):
     if save_path:
         plt.savefig(save_path)
     plt.show()
-
-
-########################################## Plots Functions for the influence of external variables ########################################################
-
-
-
-########################################## Plots Functions for anomalies ########################################################

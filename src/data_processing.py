@@ -113,21 +113,86 @@ def keep_necessary_columns(df, columns_to_keep):
     columns_to_drop = [col for col in columns_names if col not in columns_to_keep]
     return df.drop(columns=columns_to_drop)
 
-def rename_and_reoder_columns(df, new_order, new_names):
+
+def filter_columns(df, columns: list, keep: bool):
+    """
+    Filter columns in a pandas DataFrame by keeping or dropping a given list
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        columns (list or array-like): List of column names to keep or drop
+        keep (bool, optional): 
+            - True (default): Keep only the specified columns
+            - False: Drop the specified columns
+
+    Returns:
+        pd.DataFrame: New DataFrame with columns filtered according to `keep`
+
+    Notes:
+        - The original DataFrame is not modified unless `inplace=True` is explicitly
+          passed to `df.drop()` (not supported in this helper)
+    """
+    if keep:
+        # Keep only the specified columns → drop all others
+        columns_to_drop = [col for col in df.columns if col not in columns]
+    else:
+        # Drop the specified columns directly
+        columns_to_drop = columns
+
+    # Return DataFrame without the unwanted columns
+    return df.drop(columns=columns_to_drop)
+
+
+def rename_and_reorder_columns(df, new_order, new_names):
+    """
+    Rename and optionally reorder columns in a pandas DataFrame
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        new_order (list or None):
+            - If None: Keep current column order
+            - If list: New column order specified by column names or indices
+        new_name (list): List of new column names (must match number of columns)
+
+    Returns:
+        pd.DataFrame: DataFrame with columns renamed (and reordered if specified)
+    
+    Notes:
+        - The length of `new_names` must match the number of columns after reordering
+        - If `new_order` is provided, it must contain all columns to avoid KeyError
+    """
+    # If no reordering is requested, just rename columns
     if new_order == None:
         df.columns = new_names
         return df
+    # Reoder and rename the columns
     df = df[new_order]
     df.columns = new_names
     return df
 
+
 def setup_time(df, datetime_col, format):
-    """Function cleaning the data to make them exploitable"""
+    """
+    Parse a datetime column, and resample the data hourly
+
+    This function:
+        1. Extracts the first part of the datetime string if it contains a ' - ' separator
+        2. Parses the column into pandas datetime objects
+        3. Sets the parsed datetime as the DataFrame index
+        4. Resamples the data to hourly frequency, taking the mean for each hour
+        5. Resets the index back to a regular column
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        datetime_col (str): Column with datetime strings
+        format (str): Datetime format string for parsing (e.g., "%Y-%m-%d %H:%M:%S")
+    """
     df[datetime_col] = df[datetime_col].str.split(' - ').str[0]
     df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
     df = df.set_index(datetime_col)
     df = df.resample('h').mean()
     return df.reset_index()
+
 
 def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=5):
     """
@@ -177,17 +242,36 @@ def fill_hourly_nans_by_rolling_mean(df, datetime_col, value_col, n_days=5):
     # Reset index to return to original format
     return df.reset_index()
 
+
+def sort_and_concat(dfs):
+    """
+    Concatenate multiple DataFrames in chronological order based on the earliest year
+    found in their 'Date' Column
+
+    Args:
+        dfs (list of pd.DataFrame): List of DataFrames, each containing a 'Date' column
+            of datetime type
+    
+    Returns:
+        pd.DataFrame: Single DataFrame containing all the rows from 'dfs' ordered by year
+    """
+    return pd.concat(
+        sorted(dfs, key=lambda df: df['Date'].dt.year.min()),
+        ignore_index=True
+    )
+
+
 def merge_df(dfs, on, how):
     """
-    Merge a list of DataFrames on a common column.
+    Merge a list of DataFrames on a common column
     
     Parameters:
-        dfs (List[pd.DataFrame]): List of DataFrames to merge.
-        on (str): Column name to merge on.
-        how (str): Type of merge ('inner', 'outer', 'left', 'right'). Default is 'inner'.
+        dfs (List[pd.DataFrame]): List of DataFrames to merge
+        on (str): Column name to merge on
+        how (str): Type of merge ('inner', 'outer', 'left', 'right'). Default is 'inner'
         
     Returns:
-        pd.DataFrame: Merged DataFrame.
+        pd.DataFrame: Merged DataFrame
     """
     if not dfs:
         raise ValueError("The list of DataFrames is empty.")
@@ -196,29 +280,34 @@ def merge_df(dfs, on, how):
         merged_df = pd.merge(merged_df, df, on=on, how=how)
     return merged_df
 
-def concat_data(dfs):
-    dataframes = []
-    for df in dfs:
-            year = df['Date'].dt.year.min()  # get the year from the data itself
-            dataframes.append((year, df))
-            print('OUI')
-
-    # Sort by year (oldest to newest)
-    dataframes.sort(key=lambda x: x[0])
-
-    # Extract only the DataFrames, now in the right order
-    df_concat = pd.concat([df for _, df in dataframes], ignore_index=True)
-    return df_concat
-
 
 def df_summary(df):
+    """
+    Print a quick summary of a pandas DataFrame, including:
+        - Shape (rows, columns)
+        - Column data types
+        - Missing values per column
+        - First 5 rows
+        - Last 5 rows
+
+    Args:
+        df (pd.DataFrame): The DataFrame to summarize
+
+    Returns:
+        None
+    """
     print(f"Shape: {df.shape}")
+
     print("\nColumn Types:")
     print(df.dtypes)
+
     print("\nMissing Values:")
     print(df.isnull().sum())
+
     print("\nFirst Rows:")
     print(df.head())
+
     print("\nLast Rows:")
     print(df.tail())
+
     print("-" * 40)

@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 import plotly.graph_objects as go
 from plotting_visualization import *
 
@@ -284,8 +285,78 @@ def donut_tech_dist(df, start_year, end_year):
     plot_donut(count_map)
 
 
+# ===================== LINEAR REGRESSION =====================
 
-# ===================== UNFINISHED MEKKO CHART ===================== 
+
+def dummies(df, start_year, end_year, test=True):
+    """
+    Prepare dataset for OLS regression:
+    - Create dummy variables for hour, day, month, year
+    - Drop first category to avoid multicollinearity
+    """
+    df=ensure_datetime_index(df)
+    df = filter_data(df, start_year, end_year)
+    df['hour']= df.index.hour
+    df['dayofweek']= df.index.dayofweek
+    df['month']= df.index.month
+    df['year']= df.index.year
+
+    for col in COST_MAP:
+        df[col] = df[col]/1000  # Convert MW to GW
+
+    df = pd.get_dummies(
+        df, columns=['hour', 'dayofweek', 'month', 'year'],
+        drop_first=True
+    )
+    df = df.astype(float)
+    if test:
+        df.to_excel('../data/df_ols.xlsx', index=True)
+
+    return df
+
+
+def run_ols(df, target, drivers):
+    """
+    Run OLS regression on the given DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame containing target and driver variables.
+        target (str): The dependent variable (e.g., 'price').
+        drivers (list of str): List of independent variables (e.g., ['load', 'wind', 'temperature']).
+
+    Returns:
+        sm.regression.linear_model.RegressionResultsWrapper: The fitted OLS model.
+    """
+    print(drivers + [col for col in df.columns if col.startswith(('year_', 'month_', 'dayofweek_', 'hour_'))])
+    X = df[drivers + [col for col in df.columns if col.startswith(('year_', 'month_', 'dayofweek_', 'hour_'))]]
+    X = sm.add_constant(X)  # adds intercept
+    y = df[target]
+
+    model = sm.OLS(y, X)
+    results = model.fit(cov_type="HAC", cov_kwds={"maxlags": 1})
+    return results
+
+
+def plot_coefficients(results, drivers):
+    """
+    Plots OLS coefficients of the considered drivers
+    """
+    coef = results.params[drivers]
+    print("Constant (baseline price):", results.params["const"])
+    print(coef)
+    conf_int = results.conf_int().loc[drivers]
+
+    plt.figure(figsize=(12,6))
+    coef.plot(kind='bar', yerr=[coef - conf_int[0], conf_int[1] - coef], capsize=5)
+
+    plt.title('OLS coefficients')
+    plt.ylabel('EUR/MWh')
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+
+
+# ===================== UNFINISHED MEKKO CHART =====================
 
 def generation_tech_distrib(df1, start_year, end_year):
     df1 = ensure_datetime_index(df1)    # To include in filter_data function

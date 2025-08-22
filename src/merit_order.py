@@ -288,11 +288,19 @@ def donut_tech_dist(df, start_year, end_year):
 # ===================== LINEAR REGRESSION =====================
 
 
-def dummies(df, start_year, end_year, test=True):
+def dummies(df, start_year, end_year, test=False):
     """
     Prepare dataset for OLS regression:
-    - Create dummy variables for hour, day, month, year
-    - Drop first category to avoid multicollinearity
+        - Create dummy variables for hour, day, month, year
+        - Drop first category to avoid multicollinearity
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame containing the data.
+        start_year (str): Start year (inclusive) in 'YYYY' format
+        end_year (str): End year (exclusive) in 'YYYY' format
+
+    Returns:
+        pd.DataFrame: DataFrame with dummy variables added and original time columns dropped
     """
     df=ensure_datetime_index(df)
     df = filter_data(df, start_year, end_year)
@@ -308,6 +316,7 @@ def dummies(df, start_year, end_year, test=True):
         df, columns=['hour', 'dayofweek', 'month', 'year'],
         drop_first=True
     )
+    # Convert all columns to float
     df = df.astype(float)
     if test:
         df.to_excel('../data/df_ols.xlsx', index=True)
@@ -315,20 +324,30 @@ def dummies(df, start_year, end_year, test=True):
     return df
 
 
-def run_ols(df, target, drivers):
+def run_ols(df, target, drivers, dummies=True):
     """
     Run OLS regression on the given DataFrame.
 
     Parameters:
-        df (pd.DataFrame): The input DataFrame containing target and driver variables.
-        target (str): The dependent variable (e.g., 'price').
-        drivers (list of str): List of independent variables (e.g., ['load', 'wind', 'temperature']).
+        df (pd.DataFrame): The input DataFrame containing target and driver variables
+        target (str): The dependent variable (e.g., 'price')
+        drivers (list of str): List of independent variables (e.g., ['load', 'wind', 'temperature'])
+        dummies (bool): Whether to include time-based dummy variables (hour, day, month, year). Default is True
 
     Returns:
-        sm.regression.linear_model.RegressionResultsWrapper: The fitted OLS model.
+        sm.regression.linear_model.RegressionResultsWrapper: The fitted OLS model
     """
-    print(drivers + [col for col in df.columns if col.startswith(('year_', 'month_', 'dayofweek_', 'hour_'))])
-    X = df[drivers + [col for col in df.columns if col.startswith(('year_', 'month_', 'dayofweek_', 'hour_'))]]
+    x_vars = drivers + [col for col in df.columns if col.startswith(('year_', 'month_', 'dayofweek_', 'hour_'))]
+    print(x_vars)
+
+    # Drops rows with NaN in dependent variable, drivers, or dummies
+    df = df.dropna(subset=x_vars)
+    
+    # Add the dummies and the drivers to X
+    if dummies:
+        X = df[x_vars]
+    else:
+        X = df[drivers]
     X = sm.add_constant(X)  # adds intercept
     y = df[target]
 
@@ -339,19 +358,42 @@ def run_ols(df, target, drivers):
 
 def plot_coefficients(results, drivers):
     """
-    Plots OLS coefficients of the considered drivers
+    Plots OLS coefficients of the considered drivers in a bar chart
+
+    Parameters:
+        results (sm.regression.linear_model.RegressionResultsWrapper): The fitted OLS model
+        drivers (list of str): List of independent variables (e.g., ['load', 'wind', 'temperature'])
+
+    Returns:
+        None
     """
     coef = results.params[drivers]
+
     print("Constant (baseline price):", results.params["const"])
     print(coef)
+    print(type(coef))
     conf_int = results.conf_int().loc[drivers]
 
-    plt.figure(figsize=(12,6))
-    coef.plot(kind='bar', yerr=[coef - conf_int[0], conf_int[1] - coef], capsize=5)
+    # Colors: green if negative, red if positive
+    colors = ["#129a56" if c < 0 else "#c21f1c" for c in coef]
 
-    plt.title('OLS coefficients')
+    plt.figure(figsize=(10,6))
+    plt.bar(
+        coef.index,
+        coef.values,
+        yerr=[coef - conf_int[0], conf_int[1] - coef],
+        capsize=5,
+        width=0.6,
+        color=colors,
+        edgecolor='black'
+    )
+
+    # Add a horizontal line at y=0
+    plt.axhline(0, color='black', linewidth=1)
+
+    plt.title('Merit Order Effect (per GWh)')
     plt.ylabel('EUR/MWh')
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=30, ha='right')
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
 

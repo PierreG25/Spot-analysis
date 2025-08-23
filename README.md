@@ -78,8 +78,8 @@ This part focus on **visualization patterns** in the spot market
 ### Merit Order Effect
 
 <p align="center">
-  <img src="figures/ols_regression.png" alt="Plot 1" width="50%"/>
-  <img src="figures/ols_regression.png" alt="Plot 2" width="50%"/>
+  <img src="figures/ols_regression.png" alt="Plot 1" width="45%"/>
+  <img src="figures/ols_regression.png" alt="Plot 2" width="45%"/>
 </p>
 
 ## Part 4 - Market Forecast (work in progress)

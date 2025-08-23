@@ -62,7 +62,7 @@ This part focus on **visualization patterns** in the spot market
 
 ### Price-Capacity Scatter Plots
 
-![Price-Capacity Scatter Plot](figures/scatter_Nuclear.png)
+![Price-Capacity Scatter Plot](figures/scatter_Solar.png)
 
 ### Correlation Matrix Of Price Drivers
 

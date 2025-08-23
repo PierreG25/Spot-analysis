@@ -52,11 +52,17 @@ This part focus on **visualization patterns** in the spot market
 
 ### Average Daily Price Profile
 
+![Average Daily Price Profile](figures/daily_price_profile.png)
+
 ### Hourly Price Heatmap
+
+![Hourly Price Heatmap](figures/heatmap.png)
 
 ## Part 3 - Market Analysis
 
 ### Price-Capacity Scatter Plots
+
+![Price-Capacity Scatter Plot](figures/scatter_Nuclear.png)
 
 ### Correlation Matrix Of Price Drivers
 

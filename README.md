@@ -66,10 +66,7 @@ This part focus on **visualization patterns** in the spot market
 
 ### Correlation Matrix Of Price Drivers
 
-<p align="center">
-  <img src="figures/scatter_Solar.png" alt="Plot 1" width="45%" height="300"/>
-  <img src="figures/correlation_matrix.png" alt="Plot 2" width="45%" height="300"/>
-</p>
+![Correlatiom Matrix Of Price Drivers](figures/correlation_matrix.png)
 
 ### Marginal Technology Mix
 

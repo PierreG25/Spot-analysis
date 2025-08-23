@@ -103,7 +103,9 @@ def plot_donut(map_data, threshold_pct=3):
     ax.text(0, 0, 'Marginal\nEnergy Sources', ha='center', va='center', fontsize=14, weight='bold')
 
     plt.tight_layout()
+    fig.savefig(f'../figures/donut.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 # =================== MERIT ORDER CURVE ====================
@@ -205,7 +207,9 @@ def merit_order_curve(df, date):
     plt.legend(loc=2)
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
+    plt.savefig(f'../figures/merit_order_curve.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 def donut_tech_dist(df, start_year, end_year):
@@ -396,6 +400,9 @@ def plot_coefficients(results, drivers):
     plt.xticks(rotation=30, ha='right')
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
+    plt.savefig(f'../figures/ols_regression.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    plt.close()
 
 
 # ===================== UNFINISHED MEKKO CHART =====================

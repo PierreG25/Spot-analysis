@@ -9,14 +9,17 @@ import statsmodels.formula.api as smf
 from statsmodels.graphics.regressionplots import plot_partregress
 from plotting_visualization import *
 
-######################## Helping functions ##########################
+# ===================== HELPING FUNCTIONS =====================
+
 
 def extract_drivers_list(df, non_driver=['Date', 'Price']):
     df_columns=df.columns
     drivers = [col for col in df_columns if col not in non_driver]
     return drivers
 
-######################## Drivers identification ##########################
+
+# ===================== DRIVER IDENTIFICATION =====================
+
 
 def plot_scatter_price_driver(df, start_year, end_year, x_col, y_col='Price'):
     print(x_col)
@@ -31,6 +34,9 @@ def plot_scatter_price_driver(df, start_year, end_year, x_col, y_col='Price'):
     ax.set_title(f'{x_col.capitalize()} vs {y_col.capitalize()}')
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
+    fig.savefig(f'../figures/scatter_{x_col}.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    plt.close(fig)
 
 
 def multiple_plot_scatter_price_driver1(df, start_year, end_year, columns, y_col='Price', n_cols=2, figsize=(15, 10), title=None):
@@ -86,7 +92,9 @@ def plot_price_by_binned_driver(df, start_year, end_year, col, price_col='Price'
     plt.tight_layout()
     plt.show()
 
-######################## Multivariate Driver Screening ##########################
+
+# ===================== MULTIVARIATE DRIVER SCREENING =====================
+
 
 def plot_correlation_matrix(df, cols, start_year, end_year):
     df = ensure_datetime_index(df)
@@ -99,7 +107,9 @@ def plot_correlation_matrix(df, cols, start_year, end_year):
     ax.set_title('Correlation matrix')
     fig.autofmt_xdate()
     plt.tight_layout()
+    plt.savefig('../figures/correlation_matrix.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 def plot_partial_regression(df, start_year, end_year, target, driver, controls, figsize=(8,6), title=None):
@@ -224,5 +234,3 @@ def plot_multiple_partial_regressions(df, target, drivers, controls, start_year=
 
     plt.tight_layout()
     plt.show()
-
-######################## Model-Based Driver Importance ##########################

@@ -234,7 +234,7 @@ def shift_date(date, x_days):
 
 # ============= Time serie plot
 
-def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_values=True, inversed_style=True):
+def plot_smooth_prices(df, start, end, window_days, col='Price', raw_values=True, inversed_style=True):
     start_extended=shift_date(start, -window_days)
     end_extended=shift_date(end, window_days)
 
@@ -305,10 +305,9 @@ def plot_smooth_prices(df, start, end, window_days, save_path, col='Price', raw_
 
     fig.autofmt_xdate()
     plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
+    plt.savefig('../figures/timeserie_prices.png', dpi=300, bbox_inches='tight')
     plt.show()
-
+    plt.close()
 
 
 # ============= Price distribution
@@ -330,12 +329,14 @@ def plot_price_dist(df, start_year, end_year, price_col='Price', bins=20):
     ax.grid(axis='y')
     fig.autofmt_xdate()
     plt.tight_layout()
+    plt.savefig('../figures/price_distribution.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 # ============= Average hourly prices plot
 
-def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Price'):
+def plot_avg_hourly_prices(df, start_year, end_year, period, col='Price'):
     """
     Function plotting the average hourly day ahead prices over a certain period of time
     """
@@ -362,14 +363,14 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, save_path, col='Pri
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
+    plt.savefig('../figures/daily_price_profile.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 # ============= Boxplot
 
-def boxplot(df, period, save_path, col='Price'):
+def boxplot(df, period, col='Price'):
     """
     Create boxplots of prices by either weekdays, months or seasons, grouped by year.
 
@@ -415,13 +416,13 @@ def boxplot(df, period, save_path, col='Price'):
     plt.gcf().autofmt_xdate()
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
+    plt.savefig('../figures/boxplot.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 # ============= Heat map
 
-def plot_heatmap(df, start_year, end_year, period, save_path, col='Price'):
+def plot_heatmap(df, start_year, end_year, period, col='Price'):
     # Convert to datetime and filter by year
     df = ensure_datetime_index(df)
     df_concat = extract_periodic_data(df, start_year, end_year, period)
@@ -445,6 +446,6 @@ def plot_heatmap(df, start_year, end_year, period, save_path, col='Price'):
     ax.set_ylabel("Day of Week")
     ax.set_title(f"Average Electricity Price by Weekday and Hour ({start_year} - {end_year}) \nwithin {split_period(period)}")
     plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path)
+    plt.savefig('../figures/heatmap.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()

@@ -74,8 +74,8 @@ This part focus on **visualization patterns** in the spot market
 ### Marginal Technology Mix
 
 <p align="center">
-  <img src="figures/merit_order_curve.png" alt="Plot 1" height="250"/>
-  <img src="figures/donut.png" alt="Plot 2" height="250"/>
+  <img src="figures/merit_order_curve.png" alt="Plot 1" height="270"/>
+  <img src="figures/donut.png" alt="Plot 2" height="270"/>
 </p>
 
 ## Part 4 - Market Forecast (work in progress)

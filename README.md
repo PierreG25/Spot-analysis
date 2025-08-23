@@ -73,6 +73,11 @@ This part focus on **visualization patterns** in the spot market
 
 ### Marginal Technology Mix
 
+<p align="center">
+  <img src="figures/merit_order_curve.png" alt="Plot 1" width="45%"/>
+  <img src="figures/donut.png" alt="Plot 2" width="45%"/>
+</p>
+
 ## Part 4 - Market Forecast (work in progress)
 
 Next steps:
@@ -82,8 +87,4 @@ Next steps:
   - ARIMA  
 - Evaluate with **MAPE / RMSE**
 - Compare forecast vs ENTSOE's forecast vs actual prices
-
-## Aperçu
-
-![Exemple de graphique](figures/price_evolution.png)
 

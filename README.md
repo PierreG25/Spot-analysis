@@ -48,7 +48,7 @@ This part focus on **visualization patterns** in the spot market
 - Smoothed Daily Average Price:
 - Daily Candlestick Chart of Day-Ahead Prices:
 
-![Time Series Plots](../figures/timeserie_prices.png)
+![Time Series Plots](figures/timeserie_prices.png)
 
 ### Average Daily Price Profile
 

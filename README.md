@@ -75,7 +75,7 @@ This part focus on **visualization patterns** in the spot market
 
 <p align="center">
   <img src="figures/merit_order_curve.png" alt="Plot 1" width="60%"/>
-  <img src="figures/donut.png" alt="Plot 2" width="40%"/>
+  <img src="figures/donut.png" alt="Plot 2" width="35%"/>
 </p>
 
 ## Part 4 - Market Forecast (work in progress)

@@ -397,10 +397,55 @@ def plot_coefficients(results, drivers):
 
     plt.title('Merit Order Effect (per GWh)')
     plt.ylabel('EUR/MWh')
-    plt.xticks(rotation=30, ha='right')
-    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.savefig(f'../figures/ols_regression.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    plt.close()
+
+
+def plot_moe_effect(results, driver, prexisting_coefs):
+    """
+    Plot a bar chart comparing the existing coefficient find in scientific article
+    and the one calculated with our dataset, for the given driver (e.g., wind, solar, renewables)
+
+    Parameters:
+        results (sm.regression.linear_model.RegressionResultsWrapper): The fitted OLS model
+        driver (str): The independent variable of interest (e.g., 'wind', 'solar', 'renewables')
+        prexisting_coefs (dict): Dictionary with pre-existing coefficients from scientific articles
+    
+    Returns:
+        None
+    """
+    coef = results.params[driver]
+    coef = -coef.values[0]
+    # Add the coefficient from our regression to the existing data
+    keys = list(prexisting_coefs.keys()) + ['This study']
+    values = list(prexisting_coefs.values()) + [coef]
+    print(keys)
+    print(values)
+
+    # Colors: green if negative, red if positive
+    colors = ["#c21f1c" if c == coef else "#08748f" for c in values]
+
+    plt.figure(figsize=(10,6))
+    plt.bar(
+        keys,
+        values,
+        capsize=5,
+        width=0.6,
+        color=colors,
+        edgecolor='black'
+    )
+
+    # Add a horizontal line at y=0
+    plt.axhline(0, color='black', linewidth=1)
+
+    plt.title('Merit Order Effect (per GWh of renewables)')
+    plt.ylabel('EUR/MWh')
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(f'../figures/ols_regression_moe_effect.png', dpi=300, bbox_inches='tight')
     plt.show()
     plt.close()
 

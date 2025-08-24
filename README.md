@@ -121,7 +121,7 @@ Now let's try another approach and see the influence of the current generation m
 The OLS regression gives a coefficient for each generation technology, which represent the effect of a marginal demand of 1GWh that is met by the technology.
 
 <p align="center">
-  <img src="figures/ols_regression.png" alt="Plot 1" width="45%"/>
+  <img src="figures/ols_regression_moe_effect.png" alt="Plot 1" width="45%"/>
   <img src="figures/ols_regression.png" alt="Plot 2" width="45%"/>
 </p>
 

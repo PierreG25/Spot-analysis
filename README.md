@@ -38,23 +38,47 @@ The dataset combines:
 
 ## Part 1 - Data Cleaning and Processing
 
+Electricity market datasets are large, heterogeneous, and often incomplete, so preprocessing is a crucial step before any visualization or modeling. The goal is to build a single, consistent, hourly master dataset that combines day-ahead prices with demand and generation fundamentals.
+
+In this step:
+- Loaded raw CSVs (prices, load, generation)
+- Timestamp standardization
+- Merging datasets
+- Handled missing values
+
+Outcome:
+Clean, enriched dataset ready for use
+
 ## Part 2 - Exploratory Visualization
 
-This part focus on **visualization patterns** in the spot market
+Exploratory data analysis is essential to detect patterns, seasonality, and anomalies in the French day-ahead electricity market. Visualizations provide intuition on how demand, generation mix, and external factors shape price dynamics.
 
 ### Time Series Plots
 
-- Price evolution across a period
-- Smoothed Daily Average Price:
-- Daily Candlestick Chart of Day-Ahead Prices:
+We begin with a full-year time series of French day-ahead electricity prices (hourly resolution).  
+This visualization highlights overall price volatility, and notable spikes often linked to demand peaks or supply constraints.
 
 ![Time Series Plots](figures/timeserie_prices.png)
 
 ### Average Daily Price Profile
 
+Next, we examine the **average daily price curve**, computed by aggregating all days of the selected period for multiple years.  
+This chart reveals typical **day-ahead price dynamics**:  
+- Morning ramp-up as demand increases
+- Midday moderation with solar generation
+- Evening peak due to high residential and commercial demand
+- Changes between the years
+
 ![Average Daily Price Profile](figures/daily_price_profile.png)
 
 ### Hourly Price Heatmap
+
+Finally, we combine seasonality and price dynamics with a **heatmap**.  
+- The x-axis shows the **hour of the day (0–23h)**
+- The y-axis shows the **weekday**
+- Colors represent price levels.  
+
+This representation allows us to detect both **recurring hourly peaks** and **seasonal effects** (e.g. higher winter evening prices, lower summer midday prices).  
 
 ![Hourly Price Heatmap](figures/heatmap.png)
 

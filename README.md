@@ -84,11 +84,22 @@ This representation allows us to detect both **recurring hourly peaks** and **se
 
 ## Part 3 - Market Analysis
 
+This section identifies and quantifies the main drivers behind French day-ahead electricity prices. We examine correlations between prices and fundamental factors such as demand, renewable generation, and nuclear availability. Statistical modeling (OLS regression) helps measure their relative influence.
+
 ### Price-Capacity Scatter Plots
+
+Scatter plots compare day-ahead prices vs generation by technology (e.g., solar, wind) to visualize how varying supply levels influence market prices
 
 ![Price-Capacity Scatter Plot](figures/scatter_Solar.png)
 
 ### Correlation Matrix Of Price Drivers
+
+Scatter plots might be a good first insight into the relation price vs generation by technology, but they just reveal trends. For more accuracy, a correlation matrix highlights dependencies between prices and key market drivers (e.g., load, solar, nuclear, ...)
+
+Key observations:
+- Load shows strong positive correlation with prices
+- Renewable generation (e.g., wind, solar) is negatively correlated with prices. Price tends to decrease as renewable generation goes up
+- 
 
 ![Correlatiom Matrix Of Price Drivers](figures/correlation_matrix.png)
 

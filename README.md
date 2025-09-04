@@ -103,6 +103,19 @@ Key observations:
 
 ### Marginal Technology Mix
 
+General idea:
+
+The day-ahead electricity price is determined by supply and demand. For each hour, the marginal plant needed to satisfy the demand, determined the price. Thus, the price is the marginal cost associated to that last plant.
+Therefore, to see this functionnement, we plot a chart with the marginal cost of each plant by the cumulative capacity, with plant sorted by marginal cost, called the merit order curve. Thus, as mention previously, for each hour we can estimate the electricity price by matching supply and demand.
+
+In this case:
+
+A few hypothesis have been made (because of missing data):
+- Marginal costs are said to be constant in time
+- All marginal costs from the same sources (e.g., nuclear plant, solar plant, ...) are said to be constant
+- Importation of electricity is not considered
+- If load exceed supply we assume the last plant set the price
+
 <p align="center">
   <img src="figures/merit_order_curve.png" alt="Plot 1" height="270"/>
   <img src="figures/donut.png" alt="Plot 2" height="270"/>

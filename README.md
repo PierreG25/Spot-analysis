@@ -20,7 +20,6 @@ The objectives are:
 - Identify drivers of price fluctuations
 - Provide a first forecasting baseline (to be extended)
 
-
 ## Data Sources
 
 The dataset combines:
@@ -105,16 +104,19 @@ Key observations:
 
 General idea:
 
-The day-ahead electricity price is determined by supply and demand. For each hour, the marginal plant needed to satisfy the demand, determined the price. Thus, the price is the marginal cost associated to that last plant.
-Therefore, to see this functionnement, we plot a chart with the marginal cost of each plant by the cumulative capacity, with plant sorted by marginal cost, called the merit order curve. Thus, as mention previously, for each hour we can estimate the electricity price by matching supply and demand.
+Producers submit bids that reflect their short-run marginal costs. These bids are ordered from lowest to highest and plotted against cumulative capacity.
+For any given hour, electricity demand is placed on this curve. The point where demand meets supply indicates which plant — the marginal plant — must be activated. Its marginal cost sets the price. This explains why low-cost renewables, by shifting the curve to the right, tend to reduce wholesale prices: the so-called merit order effect.
+In this project, the merit order curve is used to build a stylized representation of price formation in the French day-ahead market. For each hour, demand is matched to the cumulative supply curve, and the marginal technology is identified to approximate the market-clearing price.
 
-In this case:
+Several simplifying assumptions were necessary:
 
 A few hypothesis have been made (because of missing data):
-- Marginal costs are said to be constant in time
-- All marginal costs from the same sources (e.g., nuclear plant, solar plant, ...) are said to be constant
-- Importation of electricity is not considered
-- If load exceed supply we assume the last plant set the price
+- Marginal costs are assumed constant over time
+- All plants of the same technology share the same marginal cost
+- Imports and exports are not considered
+- If demand exceeds supply, the last plant sets the price
+
+This framework cannot capture all real-world dynamics (fuel price volatility, cross-border flows, unit constraints), but it provides an intuitive and transparent way to illustrate how demand, generation mix, and technology costs interact to shape electricity prices.
 
 <p align="center">
   <img src="figures/merit_order_curve.png" alt="Plot 1" height="270"/>

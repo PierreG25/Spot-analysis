@@ -125,10 +125,12 @@ This framework cannot capture all real-world dynamics (fuel price volatility, cr
 
 ### Merit Order Effect (MOE)
 
-The main price drivers are now known but not their quantitative influence on the price. Thus, an OLS regression can quantify how each generation source impacts the price.
+The main price drivers of the day-ahead market are identified, but their quantitative influence on prices needs to be measured. To achieve this, we apply Ordinary Least Squares (OLS) regression, which allows us to estimate how different generation sources affect electricity prices
 
 First chart, specific MOE:
--We want to know the price impact of adding more renewables to the existing installions. Thus we model the electricity price following this formulas
+To assess the price impact of additional renewable energy, we model the electricity price
+
+The coefficient behind the energy variables represent the amount of EUR/MWh per GWh of newly added renewables. Thanks to an OLS regression over a period of 4 years (2021-2024), renewables energy coefficient is equal to -4.5 EUR/MWh per GWh. This indicates that each additional GWh of renewable energy reduces the day-ahead price by 4.5 EUR/MWh, consistent with the negative correlation observed in our earlier correlation analysis. This effect reflects the Merit Order Effect: as low-marginal-cost renewables enter the market, they push more expensive generation out of the supply curve, lowering prices.
 
 Second chart, technologies MOE:
 Now let's try another approach and see the influence of the current generation mix on the electricity price. Compared to equation 1, we included all the generation technologies as show by equation 2:

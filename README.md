@@ -128,7 +128,9 @@ This framework cannot capture all real-world dynamics (fuel price volatility, cr
 The main price drivers of the day-ahead market are identified, but their quantitative influence on prices needs to be measured. To achieve this, we apply Ordinary Least Squares (OLS) regression, which allows us to estimate how different generation sources affect electricity prices
 
 First chart, specific MOE:
-To assess the price impact of additional renewable energy, we model the electricity price
+To assess the price impact of additional renewable energy, we model the electricity price with the following equation:
+
+![MOE Renewables](figures/MOE_renewables.png)
 
 The coefficient behind the energy variables represent the amount of EUR/MWh per GWh of newly added renewables. Thanks to an OLS regression over a period of 4 years (2021-2024), renewables energy coefficient is equal to -4.5 EUR/MWh per GWh. This indicates that each additional GWh of renewable energy reduces the day-ahead price by 4.5 EUR/MWh, consistent with the negative correlation observed in our earlier correlation analysis. This effect reflects the Merit Order Effect: as low-marginal-cost renewables enter the market, they push more expensive generation out of the supply curve, lowering prices.
 

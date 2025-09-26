@@ -123,7 +123,7 @@ def plot_error_distribution(y_test, y_pred):
     plt.figure(figsize=(10, 6))
     plt.hist(residuals, bins=40, edgecolor='k', alpha=0.7)
     plt.title('Error Distribution')
-    plt.xlabel('Error [EUR/MWh]')
+    plt.xlabel('Error (EUR/MWh)')
     plt.ylabel('Frequency')
     plt.grid()
     plt.show()

@@ -130,14 +130,6 @@ The main price drivers of the day-ahead market are identified, but their quantit
 First chart, specific MOE:
 To assess the price impact of additional renewable energy, we model the electricity price with the following equation:
 
-![MOE Renewables](figures/moe_renewables_2.png)
-
-![Equation](figures/equation_1.svg)
-
-<p align="center">
-  <img src="figures/moe_renewables_2.png" alt="Plot 1" width=100%/>
-</p>
-
 $$
 \begin{align}
   \text{Spot}_{t} = c + b_{1}\,\text{wind}_{t} + b_{2}\,\text{pv}_{t} + \sum_{k=1}^{23} b_{k+3}\,dh_{kt} + \sum_{l=1}^{6} b_{l+26}\,dd_{lt} + \sum_{m=1}^{11} b_{m+32}\,dm_{mt} + \sum_{n=1}^{3} b_{m+43}\,dy_{nt} + u_{t}

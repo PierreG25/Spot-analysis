@@ -138,6 +138,18 @@ To assess the price impact of additional renewable energy, we model the electric
   <img src="figures/moe_renewables_2.png" alt="Plot 1" width=100%/>
 </p>
 
+$$
+\begin{align}
+\[
+\text{Spot}_{t} = c + b_{1}\,\text{wind}_{t} + b_{2}\,\text{pv}_{t} 
++ \sum_{k=1}^{23} b_{k+3}\,dh_{kt} 
++ \sum_{l=1}^{6} b_{l+26}\,dd_{lt} 
++ \sum_{m=1}^{11} b_{m+32}\,dm_{mt} 
++ \sum_{n=1}^{3} b_{m+43}\,dy_{nt} + u_{t}
+\]
+\end{align}
+$$
+
 The coefficient behind the energy variables represent the amount of EUR/MWh per GWh of newly added renewables. Thanks to an OLS regression over a period of 4 years (2021-2024), renewables energy coefficient is equal to -4.5 EUR/MWh per GWh. This indicates that each additional GWh of renewable energy reduces the day-ahead price by 4.5 EUR/MWh, consistent with the negative correlation observed in our earlier correlation analysis. This effect reflects the Merit Order Effect: as low-marginal-cost renewables enter the market, they push more expensive generation out of the supply curve, lowering prices.
 
 <p align="center">

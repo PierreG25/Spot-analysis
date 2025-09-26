@@ -152,7 +152,7 @@ Now let's try another approach and see the influence of the current generation m
 
 $$
 \begin{align}
-  \text{Spot}_{t} = c + b_{1}\text{wind}_{t} + b_{2}\text{pv}_{t} + b_{3}\text{nuclear}_{t} + b_{4}\text{hard coal}_{t} + b_{5}\text{natural gas}_{t} + b_{6}\text{fuel oil}_{t} + \sum_{k=1}^{23} b_{k+6}dh_{kt} + \sum_{l=1}^{6} b_{l+29}dd_{lt} + \sum_{m=1}^{11} b_{m+35}dm_{mt} + \sum_{n=1}^{3} b_{m+46}dy_{nt} + u_{t}
+  \text{Spot}_{t} = c + b_{1}\text{wind}_{t} + b_{2}\text{pv}_{t} + b_{3}\text{nuclear}_{t} + b_{4}\text{hard}_{t} + b_{5}\text{gas}_{t} + b_{6}\text{oil}_{t} + \sum_{k=1}^{23} b_{k+6}dh_{kt} + \sum_{l=1}^{6} b_{l+29}dd_{lt} + \sum_{m=1}^{11} b_{m+35}dm_{mt} + \sum_{n=1}^{3} b_{m+46}dy_{nt} + u_{t}
 \end{align}
 $$
 

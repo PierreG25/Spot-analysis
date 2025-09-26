@@ -155,12 +155,13 @@ The OLS regression gives a coefficient for each generation technology, which rep
 Next steps:
 - Baseline forecasting models:  
   - Linear Regression + XGBoost on the errors from the linear regression 
-  - Decision Trees / Random Forests    
-- Evaluate with **MAPE / RMSE**
-- Compare forecast vs ENTSOE's forecast vs actual prices
+  - Decision Trees / Random Forests
 
 We run an XGBoost model on the current data, from 2021 to early 2025, to forecast electricty prices.
 To evaluate the performance of the XGBoost forecasting model, we compared the predicted day-ahead electricity prices with the actual observed values over the test period. The overlapping time series plot highlights how closely the model tracks real price fluctuations, including peaks and troughs. While some deviations are visible during sudden price spikes, the overall alignment demonstrates the model’s ability to capture the main dynamics and temporal patterns of the market.
+
+RMSE: 28.22
+MAE: 22.16
 
 <p align="center">
   <img src="figures/forecast_xgboost.png" alt="Plot 1" width=100%/>

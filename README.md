@@ -140,13 +140,13 @@ To assess the price impact of additional renewable energy, we model the electric
 
 $$
 \begin{align}
-\[
-\text{Spot}_{t} = c + b_{1}\,\text{wind}_{t} + b_{2}\,\text{pv}_{t} 
-+ \sum_{k=1}^{23} b_{k+3}\,dh_{kt} 
-+ \sum_{l=1}^{6} b_{l+26}\,dd_{lt} 
-+ \sum_{m=1}^{11} b_{m+32}\,dm_{mt} 
-+ \sum_{n=1}^{3} b_{m+43}\,dy_{nt} + u_{t}
-\]
+  \[
+  \text{Spot}_{t} = c + b_{1}\,\text{wind}_{t} + b_{2}\,\text{pv}_{t} 
+  + \sum_{k=1}^{23} b_{k+3}\,dh_{kt} 
+  + \sum_{l=1}^{6} b_{l+26}\,dd_{lt} 
+  + \sum_{m=1}^{11} b_{m+32}\,dm_{mt} 
+  + \sum_{n=1}^{3} b_{m+43}\,dy_{nt} + u_{t}
+  \]
 \end{align}
 $$
 

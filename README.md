@@ -154,9 +154,8 @@ The OLS regression gives a coefficient for each generation technology, which rep
 
 Next steps:
 - Baseline forecasting models:  
-  - Linear Regression  
-  - Decision Trees / Random Forests  
-  - ARIMA  
+  - Linear Regression + XGBoost on the errors from the linear regression 
+  - Decision Trees / Random Forests    
 - Evaluate with **MAPE / RMSE**
 - Compare forecast vs ENTSOE's forecast vs actual prices
 
@@ -169,7 +168,7 @@ We run an XGBoost model on the current data, from 2021 to early 2025, to forecas
 To compare the result between the actual prices compared to what the algorithm predicted, we plot a parity chart and see how off the points are.
 
 <p align="center">
-  <img src="figures/parity.png" alt="Plot 1" width=60%/>
+  <img src="figures/parity.png" alt="Plot 1" width=100%/>
 </p>
 
 

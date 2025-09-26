@@ -359,7 +359,7 @@ def plot_avg_hourly_prices(df, start_year, end_year, period, col='Price'):
 
     ax.set_xlabel('Hours')
     ax.set_ylabel(col)
-    ax.set_title(f'Average day-ahead hourly prices ({start_year} - {end_year}) \nwithin {split_period(period)}')
+    ax.set_title(f'Average hourly prices ({start_year} - {end_year}) \nwithin {split_period(period)}')
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
@@ -444,7 +444,7 @@ def plot_heatmap(df, start_year, end_year, period, col='Price'):
     sns.heatmap(heatmap_data, cmap='coolwarm', linewidths=0.5, cbar_kws={'label': 'Average Price (EUR/MWh)'})
     ax.set_xlabel("Hour of Day")
     ax.set_ylabel("Day of Week")
-    ax.set_title(f"Average Electricity Price by Weekday and Hour ({start_year} - {end_year}) \nwithin {split_period(period)}")
+    ax.set_title(f"Average Price by Weekday and Hour ({start_year} - {end_year}) \nwithin {split_period(period)}")
     plt.tight_layout()
     plt.savefig('../figures/heatmap.png', dpi=300, bbox_inches='tight')
     plt.show()

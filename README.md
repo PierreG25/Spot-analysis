@@ -138,10 +138,17 @@ To assess the price impact of additional renewable energy, we model the electric
 
 The coefficient behind the energy variables represent the amount of EUR/MWh per GWh of newly added renewables. Thanks to an OLS regression over a period of 4 years (2021-2024), renewables energy coefficient is equal to -4.5 EUR/MWh per GWh. This indicates that each additional GWh of renewable energy reduces the day-ahead price by 4.5 EUR/MWh, consistent with the negative correlation observed in our earlier correlation analysis. This effect reflects the Merit Order Effect: as low-marginal-cost renewables enter the market, they push more expensive generation out of the supply curve, lowering prices.
 
-Second chart, technologies MOE:
+<p align="center">
+  <img src="figures/ols_regression_moe_effect.png" alt="Plot 1" width=100%/>
+</p>
+
 Now let's try another approach and see the influence of the current generation mix on the electricity price. Compared to equation 1, we included all the generation technologies as show by equation 2:
 
 The OLS regression gives a coefficient for each generation technology, which represent the effect of a marginal demand of 1GWh that is met by the technology.
+
+<p align="center">
+  <img src="figures/ols_regression.png" alt="Plot 1" width=100%/>
+</p>
 
 <p align="center">
   <img src="figures/ols_regression_moe_effect.png" alt="Plot 1" width="410"/>
@@ -157,4 +164,18 @@ Next steps:
   - ARIMA  
 - Evaluate with **MAPE / RMSE**
 - Compare forecast vs ENTSOE's forecast vs actual prices
+
+We run an XGBoost model on the current data, from 2021 to early 2025, to forecast electricty prices.
+
+<p align="center">
+  <img src="figures/forecast_xgboost.png" alt="Plot 1" width=100%/>
+</p>
+
+To compare the result between the actual prices compared to what the algorithm predicted, we plot a parity chart and see how off the points are.
+
+<p align="center">
+  <img src="figures/parity.png" alt="Plot 1" width=100%/>
+</p>
+
+
 

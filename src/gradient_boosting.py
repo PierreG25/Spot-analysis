@@ -17,9 +17,10 @@ def create_lag_features(df, target_col='Price'):
     df["month"] = df["Date"].dt.month
 
     # Lags
-    df["price_lag_1"] = df[target_col].shift(1)
-    df["price_lag_24"] = df[target_col].shift(24)
-    df["price_lag_48"] = df[target_col].shift(48)
+
+    df["price_lag_24"] = df[target_col].shift(-24)
+
+    df = df.drop(df.index[-24:])
 
     return df
 
@@ -42,7 +43,7 @@ def train_test_split_time(df, target_col='Price', train_size=0.8):
     return X_train, X_test, y_train, y_test
 
 
-def train_test_split_time2(df, target_col='Price', train_size=0.95):
+def train_test_split_time2(df, target_col='Price', train_size=0.995):
     """
     Splits the dataframe into training and testing sets based on time.
     """
@@ -50,7 +51,7 @@ def train_test_split_time2(df, target_col='Price', train_size=0.95):
     train = df.iloc[:split_index]
     test = df.iloc[split_index:]
 
-    split_index_val = int(len(train) * 0.8)
+    split_index_val = int(len(train) * train_size)
     val = train.iloc[split_index_val:]
     train = train.iloc[:split_index_val]
     
@@ -105,14 +106,16 @@ def evaluate_model(model, X_test, y_test):
 
 def plot_forecast(df_test, y_test, y_pred):
     plt.figure(figsize=(15,6))
-    plt.plot(df_test.tail(len(y_test)).index, y_test, label='Actual', color='blue')
-    plt.plot(df_test.tail(len(y_test)).index, y_pred, label='Forecast', color='orange')
+    plt.plot(df_test.tail(len(y_test)).index + pd.Timedelta(hours=24), y_test, label='Actual', color='blue')
+    plt.plot(df_test.tail(len(y_test)).index + pd.Timedelta(hours=24), y_pred, label='Forecast', color='orange')
     plt.legend()
     plt.title('Market Price Forecast vs Actual')
     plt.xlabel('Time)')
     plt.ylabel('Price (EUR/MWh)')
     plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig(f'../figures/forecast_xgboost.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 def plot_error_distribution(y_test, y_pred):
@@ -134,4 +137,6 @@ def plot_parity(y_test, y_pred):
     plt.xlabel("Actual Price [€/MWh]")
     plt.ylabel("Predicted Price [€/MWh]")
     plt.title("Parity Plot: Actual vs Predicted")
+    plt.savefig(f'../figures/parity.png', dpi=300, bbox_inches='tight')
     plt.show()
+    plt.close()

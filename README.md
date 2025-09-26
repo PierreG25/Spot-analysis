@@ -108,8 +108,6 @@ Producers submit bids that reflect their short-run marginal costs. These bids ar
 For any given hour, electricity demand is placed on this curve. The point where demand meets supply indicates which plant — the marginal plant — must be activated. Its marginal cost sets the price. This explains why low-cost renewables, by shifting the curve to the right, tend to reduce wholesale prices: the so-called merit order effect.
 In this project, the merit order curve is used to build a stylized representation of price formation in the French day-ahead market. For each hour, demand is matched to the cumulative supply curve, and the marginal technology is identified to approximate the market-clearing price.
 
-Several simplifying assumptions were necessary:
-
 A few hypothesis have been made (because of missing data):
 - Marginal costs are assumed constant over time
 - All plants of the same technology share the same marginal cost

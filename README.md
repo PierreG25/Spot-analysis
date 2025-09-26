@@ -139,7 +139,7 @@ $$
 Where:
 - $$dh_{kt}, dd_{lt}, dm_{mt}, dy_{nt} = \text{dummy variables for hour, day, month, and year}$$
 - $$\text{Spot}_{t} = \text{electricity spot price at time t}$$
-- $$\text{wind}_{t}$$, $$\text{solar}_{t} = \text{wind and solar feed in}$$
+- $$\text{wind}_{t}, \text{pv}_{t} = \text{wind and solar feed in}$$
 
 The coefficient behind the energy variables represent the amount of EUR/MWh per GWh of newly added renewables. Thanks to an OLS regression over a period of 4 years (2021-2024), renewables energy coefficient is equal to -4.5 EUR/MWh per GWh. This indicates that each additional GWh of renewable energy reduces the day-ahead price by 4.5 EUR/MWh, consistent with the negative correlation observed in our earlier correlation analysis. This effect reflects the Merit Order Effect: as low-marginal-cost renewables enter the market, they push more expensive generation out of the supply curve, lowering prices.
 

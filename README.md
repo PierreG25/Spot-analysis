@@ -160,12 +160,13 @@ Next steps:
 - Compare forecast vs ENTSOE's forecast vs actual prices
 
 We run an XGBoost model on the current data, from 2021 to early 2025, to forecast electricty prices.
+To evaluate the performance of the XGBoost forecasting model, we compared the predicted day-ahead electricity prices with the actual observed values over the test period. The overlapping time series plot highlights how closely the model tracks real price fluctuations, including peaks and troughs. While some deviations are visible during sudden price spikes, the overall alignment demonstrates the model’s ability to capture the main dynamics and temporal patterns of the market.
 
 <p align="center">
   <img src="figures/forecast_xgboost.png" alt="Plot 1" width=100%/>
 </p>
 
-To compare the result between the actual prices compared to what the algorithm predicted, we plot a parity chart and see how off the points are.
+In addition, a parity plot was generated to compare forecasted values against actual prices on a point-by-point basis. Ideally, a perfect model would have all points lying along the 45-degree diagonal line. In practice, the results show a tight clustering around this line, confirming that the model predictions are reasonably accurate. The dispersion of points around extreme values indicates areas where the model is less precise, but overall the parity plot reinforces the robustness of the forecasting approach.
 
 <p align="center">
   <img src="figures/parity.png" alt="Plot 1" width=100%/>

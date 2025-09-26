@@ -134,8 +134,8 @@ def plot_parity(y_test, y_pred):
     plt.scatter(y_test, y_pred, alpha=0.5)
     lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
     plt.plot(lims, lims, "r--", alpha=0.8)
-    plt.xlabel("Actual Price [€/MWh]")
-    plt.ylabel("Predicted Price [€/MWh]")
+    plt.xlabel("Actual Price (€/MWh)")
+    plt.ylabel("Predicted Price (€/MWh)")
     plt.title("Parity Plot: Actual vs Predicted")
     plt.savefig(f'../figures/parity.png', dpi=300, bbox_inches='tight')
     plt.show()

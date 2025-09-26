@@ -150,11 +150,6 @@ The OLS regression gives a coefficient for each generation technology, which rep
   <img src="figures/ols_regression.png" alt="Plot 1" width=100%/>
 </p>
 
-<p align="center">
-  <img src="figures/ols_regression_moe_effect.png" alt="Plot 1" width="410"/>
-  <img src="figures/ols_regression.png" alt="Plot 2" width="410"/>
-</p>
-
 ## Part 4 - Market Forecast (work in progress)
 
 Next steps:
@@ -174,7 +169,7 @@ We run an XGBoost model on the current data, from 2021 to early 2025, to forecas
 To compare the result between the actual prices compared to what the algorithm predicted, we plot a parity chart and see how off the points are.
 
 <p align="center">
-  <img src="figures/parity.png" alt="Plot 1" width=100%/>
+  <img src="figures/parity.png" alt="Plot 1" width=60%/>
 </p>
 
 

@@ -132,6 +132,8 @@ To assess the price impact of additional renewable energy, we model the electric
 
 ![MOE Renewables](figures/moe_renewables_2.png)
 
+![Equation](figures/equation_1.svg)
+
 <p align="center">
   <img src="figures/moe_renewables_2.png" alt="Plot 1" width=100%/>
 </p>

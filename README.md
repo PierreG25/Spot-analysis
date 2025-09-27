@@ -123,7 +123,7 @@ This framework cannot capture all real-world dynamics (fuel price volatility, cr
 
 ### Merit Order Effect (MOE)
 
-The main price drivers of the day-ahead market are identified, but their quantitative influence on prices needs to be measured. To achieve this, we apply Ordinary Least Squares (OLS) regression, which allows us to estimate how different generation sources affect electricity prices
+The main price drivers of the day-ahead market are identified, but their quantitative influence on prices needs to be measured. To achieve this, we apply Ordinary Least Squares (OLS) regression, which allows us to estimate how different generation sources affect electricity prices.
 
 First chart, specific MOE:
 To assess the price impact of additional renewable energy, we model the electricity price with the following equation:

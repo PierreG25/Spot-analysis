@@ -35,3 +35,9 @@
 *.gz     binary
 *.tar    binary
 *.ipynb_checkpoint* text eol=lf
+
+# Tell GitHub Linguist to ignore notebooks in language stats
+*.ipynb linguist-documentation
+
+# Force Python files to be recognized as Python
+*.py linguist-language=Python

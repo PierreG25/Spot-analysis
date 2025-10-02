@@ -116,6 +116,8 @@ A few hypothesis have been made (because of missing data):
 
 This framework cannot capture all real-world dynamics (fuel price volatility, cross-border flows, unit constraints), but it provides an intuitive and transparent way to illustrate how demand, generation mix, and technology costs interact to shape electricity prices.
 
+
+By compiling the energy technology which set the price for all hours of a given period, the donut chart highlights the main energy sources used for the setting the price. 
 <p align="center">
   <img src="figures/merit_order_curve.png" alt="Plot 1" height="270"/>
   <img src="figures/donut.png" alt="Plot 2" height="270"/>

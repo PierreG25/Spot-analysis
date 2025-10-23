@@ -9,7 +9,7 @@ The project is divided into four main parts:
 3. **Market Analysis**  
 4. **Market Forecast (in development)** 
 
-## 📊 Project Overview
+## Project Overview
 
 Electricity markets are fundamental to balancing **supply and demand in real-time**.  
 This project explores **day-ahead price dynamics in France**, analyzing key drivers such as demand, renewables, nuclear availability, and external conditions.
@@ -24,7 +24,7 @@ The objectives are:
 
 The dataset combines:
 - **EPEX Spot day-ahead prices** (hourly resolution)
-- **ENTSO-E / RTE data** on demand and generation (nuclear, renewables, fossil)
+- **ENTSO-E data** on demand and generation (nuclear, renewables, fossil)
 
 ## Technologies
 
@@ -105,7 +105,7 @@ Key observations:
 General idea:
 
 Producers submit bids that reflect their short-run marginal costs. These bids are ordered from lowest to highest and plotted against cumulative capacity.
-For any given hour, electricity demand is placed on this curve. The point where demand meets supply indicates which plant — the marginal plant — must be activated. Its marginal cost sets the price. This explains why low-cost renewables, by shifting the curve to the right, tend to reduce wholesale prices: the so-called merit order effect.
+For any given hour, electricity demand is placed on this curve. The point where demand meets supply indicates which plant, the marginal plant, must be activated. Its marginal cost sets the price. This explains why low-cost renewables, by shifting the curve to the right, tend to reduce wholesale prices: the so-called merit order effect.
 In this project, the merit order curve is used to build a stylized representation of price formation in the French day-ahead market. For each hour, demand is matched to the cumulative supply curve, and the marginal technology is identified to approximate the market-clearing price.
 
 A few hypothesis have been made (because of missing data):

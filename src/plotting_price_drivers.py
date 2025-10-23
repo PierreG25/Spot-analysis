@@ -29,9 +29,9 @@ def plot_scatter_price_driver(df, start_year, end_year, x_col, y_col='Price'):
 
     fig, ax = plt.subplots(figsize=(12,6))
     sns.scatterplot(x=df[x_col], y=df[y_col], alpha=0.3, color='b')
-    ax.set_xlabel(x_col.capitalize())
+    ax.set_xlabel(f'{x_col.capitalize()} generation (MW)')
     ax.set_ylabel(y_col.capitalize())
-    ax.set_title(f'{x_col.capitalize()} vs {y_col.capitalize()}')
+    ax.set_title(f' Correlation between {x_col.capitalize()} generation and {y_col.capitalize()}')
     ax.legend()
     ax.grid(True, linestyle='--', alpha=0.5)
     fig.savefig(f'../figures/scatter_{x_col}.png', dpi=300, bbox_inches='tight')

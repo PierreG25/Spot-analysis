@@ -1,6 +1,6 @@
-# Day-Ahead Electricity Market Analysis (EPEX Spot)
+# Day-Ahead Electricity Market Analysis
 
-This repository contains a structured analysis of the French day-ahead electricity market (EPEX Spot).
+This repository contains a structured analysis of the French day-ahead electricity market.
 The project explores historical data, identifies key price drivers, and builds the foundation for forecasting models.
 The project is divided into four main parts:
 
@@ -22,9 +22,8 @@ The objectives are:
 
 ## Data Sources
 
-The dataset combines:
-- **EPEX Spot day-ahead prices** (hourly resolution)
-- **ENTSO-E data** on demand and generation (nuclear, renewables, fossil)
+The dataset containes:
+- **ENTSO-E data** on day-ahead price, demand and generation (nuclear, renewables, fossil)
 
 ## Technologies
 

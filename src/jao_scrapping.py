@@ -78,7 +78,7 @@ def fetch_day(
     return df
 
 
-def download_2025(out_dir: str = "data/jao/shadow_prices/2025"):
+def download_2025(out_dir: str = "data/raw/jao/shadow_prices/2025"):
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -92,7 +92,7 @@ def download_2025(out_dir: str = "data/jao/shadow_prices/2025"):
     with requests.Session() as session:
         d = start
         for _ in tqdm(range((end - start).days), desc="Downloading CORE Shadow Prices 2025"):
-            out_file = out_path / f"shadowPrices_{d.isoformat()}.parquet"
+            out_file = out_path / f"shadowPrices_{d.isoformat()}.csv"
 
             if out_file.exists():
                 d += timedelta(days=1)
@@ -100,7 +100,7 @@ def download_2025(out_dir: str = "data/jao/shadow_prices/2025"):
 
             try:
                 df = fetch_day(session, d, filter_obj)
-                df.to_parquet(out_file, index=False)
+                df.to_csv(out_file.with_suffix(".csv"), index=False)
 
             except Exception as e:
                 (out_path / f"shadowPrices_{d.isoformat()}.error.txt").write_text(str(e))

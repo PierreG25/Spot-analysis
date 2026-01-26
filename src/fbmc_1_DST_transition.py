@@ -23,32 +23,103 @@ price_path_nl = 'data/raw/fbmc/price/2025_price_nl_raw.csv'
 
 ### STANDARDIZE DATASETS TO 15MIN RESOLUTION + WINTER/SUMMER TIME ###
 
+
+# def flag_dst_rows(df, datetime_col="MTU (CET/CEST)") -> pd.Series:
+#     """Flag rows that correspond to DST transition"""
+#     mask = df[datetime_col].str.contains(DST_PATTERN, regex=True)
+#     return mask
+
+# def downsample_to_15(df, value_cols, datetime_col="MTU (CET/CEST)"):
+#     """Downsample to 15-min resolution by forward filling each hour into 4 slots for multiple value columns."""
+    
+#     # Ensure datetime_col is passed as a list
+#     if isinstance(datetime_col, str):
+#         datetime_col = [datetime_col]  # Convert to list if it's a string
+
+#     # Ensure value_cols is a list
+#     if isinstance(value_cols, str):
+#         value_cols = [value_cols]  # Convert to list if it's a single string
+    
+#     # Check the time interval between consecutive rows
+#     interval = pd.to_datetime(df[datetime_col[0]]).diff().mode()[0]
+#     if interval == pd.Timedelta(minutes=15):
+#         return df  # If already 15min, return the data as is
+
+#     # Ensure `group_col` is defined correctly
+#     group_col = df.columns.difference(datetime_col + value_cols).tolist()  # Ensure both are lists
+    
+#     # Set the datetime column as the index
+#     df = df.set_index(datetime_col[0])  # Set the index with the first element in datetime_col list
+
+#     # Resample and forward fill for each value column
+#     for value_col in value_cols:
+#         # Apply resampling
+#         resampled_col = (
+#             df.groupby(group_col)[value_col]
+#             .resample('15min')
+#             .ffill(limit=3)
+#         )
+        
+#         # Align the resampled column with the original dataframe index
+#         df[value_col] = resampled_col.reindex(df.index, method='ffill')  # Align with original index
+
+#     df_15min = df.reset_index()  # Reset the index after processing
+#     return df_15min
+
+
+# def setup_time(df, value_cols, datetime_col="MTU (CET/CEST)", format="mixed"):
+#     """Parse a datetime column, removing rows with DST transition hours."""
+#     print(f"Original dataframe:\n{df.head()}")
+
+#     # Flag DST rows
+#     mask = flag_dst_rows(df, datetime_col)
+
+#     # Remove timezone and split the datetime to clean format
+#     df[datetime_col] = (df[datetime_col].str.split(' - ')
+#                         .str[0].str
+#                         .replace(DST_PATTERN, "", regex=True)
+#                         .str.strip())
+
+#     # Parse the datetime column to a standard format
+#     df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
+#     print(f"After parsing datetime:\n{df.head()}")
+
+#     # Identify and remove rows that correspond to DST transitions
+#     day = df[datetime_col].dt.date
+#     day_with_dst = day[mask].unique()
+
+#     # Remove rows with DST transition hours
+#     df = df.loc[~day.isin(day_with_dst)]
+#     print(f"After removing DST transition rows:\n{df.head()}")
+
+#     # Downsample the data to 15-minute intervals
+#     df = downsample_to_15(df, value_cols, datetime_col)
+#     print(f"After downsampling:\n{df.head()}")
+
+#     # Remove DST days again after downsampling due to possible residuals
+#     day = df[datetime_col].dt.date
+#     df = df.loc[~day.isin(day_with_dst)]
+
+#     return df
+
+
 DST_PATTERN = r"\(CET\)|\(CEST\)"
 
-def flag_dst_rows(df: pd.DataFrame, datetime_col = "MTU (CET/CEST)") -> pd.Series:
+def flag_dst_rows(df, datetime_col = "MTU (CET/CEST)") -> pd.Series:
     """Flag rows that correspond to DST transition"""
     mask = df[datetime_col].str.contains(DST_PATTERN, regex=True)
     return mask
 
-def setup_time(df, mask, datetime_col = "MTU (CET/CEST)", format = "mixed"):
-    """Parse a datetime column, removing rows with DST transition hours."""
-    df[datetime_col] = (df[datetime_col].str.split(' - ')
-                        .str[0].str
-                        .replace(DST_PATTERN, "", regex=True)
-                        .str.strip())
-    
-    df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
-
-    day = df[datetime_col].dt.dayofyear
-    day_with_dst = day[mask].unique()
-
-    df = df.loc[~day.isin(day_with_dst)]
-    return df
-
 def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
     """Downsample to 15-min resolution by forward filling each hour into 4 slots."""
+    interval = pd.to_datetime(df[datetime_col]).diff().mode()[0]
+    if interval == pd.Timedelta(minutes=15):
+        return df  # If already 15min, return the data as is
+    
     group_col = df.columns.difference([datetime_col, value_col]).tolist()
+
     df = df.set_index(datetime_col)
+    
     df_15min = (
         df.groupby(group_col)[value_col]
         .resample('15min')
@@ -56,13 +127,65 @@ def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
         .reset_index()
     )
 
-    return df_15min.dropna()
+    return df_15min
 
-mask = flag_dst_rows(pd.read_csv(gen_path_be, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"]))
-df = setup_time(pd.read_csv(gen_path_be, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"]), mask)
+# def downsample_to_15(df, value_cols, datetime_col = "MTU (CET/CEST)"):
+#     """Downsample to 15-min resolution by forward filling each hour into 4 slots for multiple value columns."""
+    
+#     interval = pd.to_datetime(df[datetime_col]).diff().mode()[0]
+#     if interval == pd.Timedelta(minutes=15):
+#         return df  # If already 15min, return the data as is
 
-df = downsample_to_15(df, "Generation (MW)")
-df.to_csv('data/raw/fbmc/generation/gen_be_15min.csv')
+#     group_col = df.columns.difference([datetime_col] + value_cols).tolist()  # Ensure datetime_col is treated as a list
+
+#     df = df.set_index(datetime_col)
+    
+#     # Loop through each value column and apply the resampling
+#     for value_col in value_cols:
+#         df[value_col] = (
+#             df.groupby(group_col)[value_col]
+#             .resample('15min')
+#             .ffill(limit=3)
+#         )
+
+#     df_15min = df.reset_index()
+#     return df_15min
+
+def setup_time(df, value_cols, datetime_col = "MTU (CET/CEST)", format = "mixed"):
+    """Parse a datetime column, removing rows with DST transition hours."""
+    print(f"Original dataframe:\n{df.head()}")
+    
+    mask = flag_dst_rows(df)
+
+    df[datetime_col] = (df[datetime_col].str.split(' - ')
+                        .str[0].str
+                        .replace(DST_PATTERN, "", regex=True)
+                        .str.strip())
+    
+    df[datetime_col] = pd.to_datetime(df[datetime_col], format=format)
+    print(f"After parsing datetime:\n{df.head()}")
+
+    day = df[datetime_col].dt.date
+    day_with_dst = day[mask].unique()
+    # print(f"Days with DST transitions:\n{day_with_dst}")
+    
+    # Remove rows with DST transition hours
+    df = df.loc[~day.isin(day_with_dst)]
+    # print(f"After removing DST transition rows:\n{df.head()}")
+    
+    df = downsample_to_15(df, value_cols)
+    # print(f"After downsampling:\n{df.head()}")
+    
+    # Remove days with DST transition hours again after downsampling due to possible residuals
+    day = df[datetime_col].dt.date
+    df = df.loc[~day.isin(day_with_dst)]
+
+    return df
+
+df_gen = setup_time(pd.read_csv(gen_path_fr, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"]), "Generation (MW)")
+
+print('FINISHED PROCESSING GENERATION DATA')
+df_gen.to_csv('data/raw/fbmc/generation/gen_fr_15min.csv')
 
 # df_gen_be = pd.read_csv(gen_path_be, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
 # df_gen_be_15min = to_15min_constant(df_gen_be)
@@ -80,9 +203,7 @@ def load_generation_data(paths, areas):
         print(path)
         df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
 
-        mask = flag_dst_rows(df)
-        df = setup_time(df, mask)
-        df = downsample_to_15(df, "Generation (MW)")
+        df = setup_time(df, "Generation (MW)")
 
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Generation (MW)": "Generation"})
         df = df.groupby(["Time", "Area"]).agg({"Generation": "sum"}).reset_index()
@@ -98,19 +219,18 @@ def load_load_data(paths, areas):
     data_frames = []
     for path, area_name in zip(paths, areas):
         df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
+        df.drop(columns=['Day-ahead Total Load Forecast (MW)'], inplace=True)
 
-        mask = flag_dst_rows(df)
-        df = setup_time(df, mask)
-        df = downsample_to_15(df, "Actual Total Load (MW)")   
-        
+        df = setup_time(df, "Actual Total Load (MW)") 
+        df.to_csv('data/debug/load_debug_' + f'{area_name}' + '.csv')
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Actual Total Load (MW)": "Total load"})
         df = df[["Time", "Area", "Total load"]]
         df['Area'] = area_name
-        df.to_csv('data/debug/load_debug_' + f'{area_name}' + '.csv')
-        print(df[8450:8460])
+        # df.to_csv('data/debug/load_debug_' + f'{area_name}' + '.csv')
         data_frames.append(df)
     return pd.concat(data_frames, ignore_index=True)
 
+print('FINISHED PROCESSING LOAD DATA')
 
 # Function to calculate net position and renewable share
 def calculate_metrics(df_gen, df_load):

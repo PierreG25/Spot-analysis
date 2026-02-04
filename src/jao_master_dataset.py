@@ -33,11 +33,11 @@ def keep_relevant_columns(df):
     df.rename(columns={
         "dateTimeUtc": "Time",
         "cnecName": "CNEC Name",
-        "ram": "RAM (MW)",
-        "hub_BE": "ptdf_BE",
-        "hub_FR": "ptdf_FR",
-        "hub_DE": "ptdf_DE",
-        "hub_NL": "ptdf_NL",
+        "ram": "RAM",
+        "hub_BE": "BZN|BE",
+        "hub_FR": "BZN|FR",
+        "hub_DE": "BZN|DE-LU",
+        "hub_NL": "BZN|NL",
     }, inplace=True)
     print(df.columns)
     return df
@@ -57,7 +57,7 @@ output_path = "../epex-spot-analysis/data/clean/jao/shadow_prices/2025/jao_not_d
 df_jao_clean.to_csv(output_path, index=False)
 print(f"Saved cleaned dataset to {output_path}")
 
-df_2025_01_01 = concatenate_files("../epex-spot-analysis/data/shadowPrices 2025-01-01 0000 - 2025-01-01 2300", diff=";")
+# df_2025_01_01 = concatenate_files("../epex-spot-analysis/data/shadowPrices 2025-01-01 0000 - 2025-01-01 2300", diff=";")
 # df_2025_01_01["DateTimeUtc"] = pd.to_datetime(df_2025_01_01["DateTimeUtc"])
 # df_2025_01_01.sort_values("DateTimeUtc", inplace=True)
-df_2025_01_01.to_csv("../epex-spot-analysis/data/clean/jao/shadow_prices/2025/shadowPrices_test_2025_01_01.csv", index=False)
+# df_2025_01_01.to_csv("../epex-spot-analysis/data/clean/jao/shadow_prices/2025/shadowPrices_test_2025_01_01.csv", index=False)

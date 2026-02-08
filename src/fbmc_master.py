@@ -66,16 +66,31 @@ def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
         return df  # If already 15min, return the data as is
     
     df.to_csv('data/debug/df_before_downsample_debug.csv')
-    group_col = df.columns.difference([datetime_col, value_col]).tolist()
+    group_cols = df.columns.difference([datetime_col, value_col]).tolist()
+    print(group_cols)
 
-    df = df.set_index(datetime_col)
+    # This creates a 'dummy' row at the very end of each group (e.g., 00:00 of the next day)
+    # so that resample('15min') is forced to fill the slots in between.
+    group_maxes = df.groupby(group_cols)[datetime_col].max().reset_index()
+    group_maxes[datetime_col] = group_maxes[datetime_col] + interval
+    
+    df_extended = pd.concat([df, group_maxes], ignore_index=True)
+
+    # Calculate fill limit dynamically (e.g., 1h -> limit 3; 30m -> limit 1)
+    ffill_limit = int(interval / pd.Timedelta('15min')) - 1
+
+    df_extended = df_extended.set_index(datetime_col)
     
     df_15min = (
-        df.groupby(group_col)[value_col]
+        df_extended.groupby(group_cols)[value_col]
         .resample('15min')
-        .ffill(limit=3)
+        .ffill(limit=ffill_limit)
         .reset_index()
     )
+
+    # The dummy record is always the last row of each resampled group
+    df_15min = df_15min.drop(df_15min.groupby(group_cols).tail(1).index)
+
     df_15min.to_csv('data/debug/df_after_downsample_debug.csv')
     return df_15min
 
@@ -183,6 +198,8 @@ def create_master_dataset(gen_paths, load_paths, price_paths, areas):
 
     master_df = calculate_metrics(df_gen, df_load)
     master_df = pd.merge(master_df, df_price, on=['Time', 'Area'], how='left')
+
+    master_df['Area'] = master_df['Area'].str.strip().str.split('|').str[1].str.split('-').str[0]
 
     return master_df
 

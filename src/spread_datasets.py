@@ -15,6 +15,7 @@ def add_price(df_flw, df_zone,
               datetime_col = 'Time',
               price_col = 'Price',
               zone_col = 'Area',
+              spread_ref = 'FR',
               zones = ['FR', 'BE', 'DE', 'NL']):
     
     # Ensure datetime format for both dataframes
@@ -32,7 +33,13 @@ def add_price(df_flw, df_zone,
     print(df_zone_pivoted.head())
     df_final = df_flw.merge(df_zone_pivoted, on = datetime_col, how = 'left')
 
+    # Compute the price spread (compared to the ref country) for each country within zone
+    for z in zones:
+        df_final[f'Spread {spread_ref}-{z}'] = df_final[f'{spread_ref}'] - df_final[z]
+
+    df_final.drop(columns=zones + [f'Spread {spread_ref}-{spread_ref}'], inplace=True)
     return df_final
+
 
 def filter_country_congestion(df, country_code, 
                               hub_from = 'hubFrom', 
@@ -84,10 +91,9 @@ def directionally_congestion(df, conges = 'congested', flow = 'Flow_normalized')
 
 # ============= SPREAD DATASET ============= #
 
-print(add_price(df_flow, df_zone_fundamental))
-exit()
+df_flow_spread = add_price(df_flow, df_zone_fundamental)
 
-df_flow_fr = filter_country_congestion(df_flow, 'FR')
+df_flow_fr = filter_country_congestion(df_flow_spread, 'FR')
 
 df_flow_fr_normalized = normalize_direction(df_flow_fr, 'FR')
 df_flow_fr_normalized = directionally_congestion(df_flow_fr_normalized)

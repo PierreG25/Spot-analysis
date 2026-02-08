@@ -6,7 +6,6 @@ master_path = 'data/clean/fbmc/master_dataset_15min.csv'
 df = pd.read_csv(master_path, parse_dates=['Time']).sort_values('Time')
 df_jao_flow = pd.read_csv('data/clean/jao/shadow_prices/2025/jao_clean_noDST_2025.csv', parse_dates=['Time']).sort_values('Time')
 
-print(df.head())
 
 # Fake PTDF data
 # Lines: L1, L2, L3, L4
@@ -22,8 +21,8 @@ def flow_lines(df_np, df_ptdf, datetime_col = 'Time', zone = 'Area', value_col =
     .pivot(index=datetime_col, columns=zone, values=value_col)
     )
 
-    print('np_wide:')
-    print(np_wide.head())
+    # print('np_wide:')
+    # print(np_wide.head())
     
     flows = []
     areas = df_np[zone].unique()
@@ -31,7 +30,6 @@ def flow_lines(df_np, df_ptdf, datetime_col = 'Time', zone = 'Area', value_col =
     for (t, line), row in df_ptdf.groupby([datetime_col, line_col]):
         # Net positions at time t
         print(t)
-        print(line)
 
         np_t = np_wide.loc[t]
 
@@ -45,6 +43,8 @@ def flow_lines(df_np, df_ptdf, datetime_col = 'Time', zone = 'Area', value_col =
             "Time": t,
             "Line": line,
             "Flow_MW": flow,
+            "hubFrom": row["hubFrom"].iloc[0],
+            "hubTo": row["hubTo"].iloc[0],
             "RAM": row["RAM"].iloc[0]
         })
 

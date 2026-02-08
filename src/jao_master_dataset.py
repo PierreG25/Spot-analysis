@@ -23,6 +23,8 @@ def keep_relevant_columns(df):
         "dateTimeUtc",
         "cnecName",
         "ram",
+        "hubFrom",
+        "hubTo",
         "hub_BE",
         "hub_FR",
         "hub_DE",
@@ -51,7 +53,7 @@ def sort_time(df, datetime_col='Time'):
 df_jao = concatenate_files(jao_raw_folder)
 df_jao_clean = keep_relevant_columns(df_jao)
 df_jao_clean = sort_time(df_jao_clean, 'Time')
-print(df_jao_clean.head(10))
+
 
 output_path = "../epex-spot-analysis/data/clean/jao/shadow_prices/2025/jao_not_downsampled_2025.csv"
 df_jao_clean.to_csv(output_path, index=False)

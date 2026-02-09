@@ -97,6 +97,8 @@ def spread_dataset(df_flw, df_zone,
     df_flow_spread_normalized = directionally_congestion(df_flow_spread, ref_country)
     df_flow_spread_normalized = filter_neighbors(df_flow_spread_normalized)
 
+    df_flow_spread_normalized.to_csv(f'data/clean/fbmc/spread_dataset_{ref_country}.csv')
+
     return df_flow_spread_normalized
     
 

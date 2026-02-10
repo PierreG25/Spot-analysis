@@ -65,7 +65,8 @@ def spread_dataset(df_flw, df_zone,
               price_col = 'Price',
               zone_col = 'Area',
               ref_country = 'FR',
-              zones = ['FR', 'BE', 'DE', 'NL']):
+              zones = ['FR', 'BE', 'DE', 'NL'],
+              neighbors = True):
     
     # Ensure datetime format for both dataframes
     df_zone[datetime_col] = pd.to_datetime(df_zone[datetime_col])
@@ -95,7 +96,12 @@ def spread_dataset(df_flw, df_zone,
 
     # Addition of the price spread
     df_flow_spread_normalized = directionally_congestion(df_flow_spread, ref_country)
-    df_flow_spread_normalized = filter_neighbors(df_flow_spread_normalized)
+
+    if neighbors:
+        df_flow_spread_normalized = filter_neighbors(df_flow_spread_normalized)
+        df_flow_spread_normalized.to_csv(f'data/clean/fbmc/spread_dataset_{ref_country}_filterd.csv')
+
+        return df_flow_spread_normalized
 
     df_flow_spread_normalized.to_csv(f'data/clean/fbmc/spread_dataset_{ref_country}.csv')
 

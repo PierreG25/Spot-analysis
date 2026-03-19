@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-master_path = 'data/clean/fbmc/master_dataset_15min.csv'
+master_path = 'data/clean/fbmc/master_dataset_15min_WITH_PRICE.csv'
 df = pd.read_csv(master_path, parse_dates=['Time']).sort_values('Time')
 df_jao_flow = pd.read_csv('data/clean/jao/shadow_prices/2025/jao_clean_noDST_2025.csv', parse_dates=['Time']).sort_values('Time')
 

@@ -45,9 +45,8 @@ def flow_lines(df, df_ptdf,
         })
 
     flows_df = pd.DataFrame(flows)
-    # Compute utilization and congestion
-    flows_df["utilization"] = flows_df["Flow_MW"].abs() / flows_df["RAM"]
-    # flows_df["congested"] = flows_df["utilization"] >= 1.0
+    # Compute stress as the absolute flow divided by the RAM of the line
+    flows_df["stress"] = flows_df["Flow_MW"].abs() / flows_df["RAM"]
 
     if save:
         flows_df.to_csv('data/clean/STEP 3/line_flows_ptdf.csv', index=False)

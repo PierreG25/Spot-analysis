@@ -44,8 +44,7 @@ def filter_neighbors(df,
 def directionally_connexion(df, country_code,
                              hub_from = 'hubFrom',
                              hub_to = 'hubTo',
-                             flow = 'Flow_MW',
-                             conges = 'congested'):
+                             flow = 'Flow_MW'):
     """
     Normalize the flow values to be positive for exports and negative for imports, 
     based on the country of interest. Also create 'From' and 'To' columns to indicate 

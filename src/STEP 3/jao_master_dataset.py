@@ -64,7 +64,6 @@ df_jao_clean = remove_dst_rows(df_jao_clean)
 df_jao_clean = drop_timezone_info(df_jao_clean)
 df_jao_clean = filter_year(df_jao_clean, 2025)
 
-
 output_path = "../epex-spot-analysis/data/clean/STEP 3/shadow_prices/jao_clean_noDST_2025.csv"
 df_jao_clean.to_csv(output_path, index=False)
 print(f"Saved cleaned dataset to {output_path}")

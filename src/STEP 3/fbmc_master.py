@@ -171,7 +171,6 @@ def calculate_metrics(df_gen, df_load):
     df_load.to_csv('data/raw/fbmc/load/load_debug.csv')
     df = pd.merge(df_gen, df_load, on=['Time', 'Area'], suffixes=('_gen', '_load'))
     df['Net position'] = df['Generation'] - df['Total load']
-    df['Renewable share'] = 0  # Placeholder as renewable data is not provided
     df['import/export flag'] = df['Net position'].apply(lambda x: 'import' if x < 0 else 'export')
     return df
 

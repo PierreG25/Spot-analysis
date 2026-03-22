@@ -44,7 +44,7 @@ def groupby_time_max_stress(
     df,
     delta=0.8,
     datetime_col='Time',
-    keep_cols = ['Spread FR-BE', 'Spread FR-DE', 'Spread FR-NL'],
+    keep_cols = [],
     countries_code=('BE', 'DE', 'NL')
 ):
     """

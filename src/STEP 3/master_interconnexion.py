@@ -79,29 +79,13 @@ def spread_dataset(df_zone, df_lines,
 
     # Compute line flows
     df_flw = flow_lines(df_zone, df_lines)
-  
-    duplicates = df_zone[df_zone.duplicated(subset = [datetime_col, zone_col], keep=False)]
-
-    # Sort them so you can see the conflicting rows next to each other
-    if not duplicates.empty:
-        print(duplicates.sort_values(by=[datetime_col, zone_col]))
-        raise ValueError('Duplicates in the datetime col of the zonal dataset')
-
-    df_zone_pivoted = df_zone.pivot(index = datetime_col, columns = zone_col, values = price_col)
-    df_flow_spread = df_flw.merge(df_zone_pivoted, on = datetime_col, how = 'left')
-
-    # Compute the price spread (compared to the ref country) for each country within zone
-    for z in zones:
-        df_flow_spread[f'Spread {ref_country}-{z}'] = df_flow_spread[f'{ref_country}'] - df_flow_spread[z]
-
-    df_flow_spread.drop(columns=zones + [f'Spread {ref_country}-{ref_country}'], inplace=True)
 
     # Filter the dataframe to only have the lines with 
     # Origin or Destination being the country of reference
-    df_flow_spread = filter_country_congestion(df_flow_spread, ref_country)
+    df_flw = filter_country_congestion(df_flw, ref_country)
 
     # Addition of the price spread
-    df_flow_spread_normalized = directionally_connexion(df_flow_spread, ref_country)
+    df_flow_spread_normalized = directionally_connexion(df_flw, ref_country)
 
     if neighbors:
         df_flow_spread_normalized = filter_neighbors(df_flow_spread_normalized)

@@ -59,7 +59,7 @@ def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
     )
 
     if interval == pd.Timedelta("15min"):
-        return df  # If already 15min, return the data as is
+        return df  # If already 15min, return the df as is
     
     df.to_csv('data/debug/df_before_downsample_debug.csv')
     group_cols = df.columns.difference([datetime_col, value_col]).tolist()
@@ -117,8 +117,8 @@ def setup_time(df, value_cols, datetime_col = "MTU (CET/CEST)", format = "mixed"
     return df
 
 
-# ============= LOAD AND PREPROCESS DATA FUNCTIONS ============= #
-# Function to load and preprocess generation data
+# ============= LOAD AND PREPROCESS df FUNCTIONS ============= #
+# Function to load and preprocess generation df
 
 def load_generation_data(paths, areas):
     data_frames = []
@@ -134,7 +134,7 @@ def load_generation_data(paths, areas):
         data_frames.append(df)
     return pd.concat(data_frames, ignore_index=True)
 
-# Function to load and preprocess load data
+# Function to load and preprocess load df
 def load_load_data(paths, areas):
     data_frames = []
     for path, area_name in zip(paths, areas):
@@ -198,19 +198,65 @@ price_paths = [price_path_be, price_path_de, price_path_fr, price_path_nl]
 
 areas = ['BZN|BE', 'BZN|DE-LU', 'BZN|FR', 'BZN|NL']
 
-def filter_areas(df, countries = ['FR']):
-    df = df.copy()
-    df.drop(columns=['Generation','import/export flag'], inplace=True)
 
-    return df[df['Area'].isin(countries)].reset_index(drop=True)
+def build_country_spreads(
+    df,
+    epsilon = 0.1,
+    ref_country = "FR",
+    countries_code = ["BE", "DE", "NL"],
+):
+    """
+    Return the dataset filtered on `country` with added spread columns
+    versus each country in `countries_code`.
 
-# Create master dataset
+    Assumptions:
+    - df contains columns: 'Time', 'Area', 'Price'
+    - spread is computed as: Price(country) - Price(other_country)
+    """
 
+    data = df.copy()
+
+    # Optional cleanup for exported CSVs
+    if "Unnamed: 0" in data.columns:
+        data = data.drop(columns="Unnamed: 0")
+
+    data["Time"] = pd.to_datetime(data["Time"])
+
+    # Keep only the requested countries
+    selected_areas = [ref_country] + countries_code
+    data = data[data["Area"].isin(selected_areas)]
+
+    # Wide format: one Price column per country, indexed by Time
+    wide = (
+        data.pivot_table(index="Time", columns="Area", values="Price", aggfunc="first")
+        .rename_axis(None, axis=1)
+        .reset_index()
+    )
+
+    # Keep only the base country rows from the original dataset
+    result = data[data["Area"] == ref_country].copy()
+
+    # Merge comparison country prices onto the base country rows
+    cols_to_merge = ["Time"] + countries_code
+    result = result.merge(wide[cols_to_merge], on="Time", how="left")
+
+    # Rename merged country price columns and compute spreads
+    for code in countries_code:
+        result = result.rename(columns={code: f"Price_{code}"})
+        result[f"spread_{ref_country}_{code}"] = result["Price"] - result[f"Price_{code}"]
+        result['congestion_' + ref_country + '_' + code] = result[f"spread_{ref_country}_{code}"].abs() >= epsilon
+        
+        result.drop(columns=[f"Price_{code}"], inplace=True)
+
+    return result
+
+
+# Create NP dataset
 if __name__ == "__main__":
     master_dataset = create_master_dataset(gen_paths, load_paths, price_paths, areas)
     master_dataset.to_csv('data/clean/STEP 3/NP_by_country.csv')
 
-    filtered_master_dataset = filter_areas(master_dataset)
+    filtered_master_dataset = build_country_spreads(master_dataset)
     filtered_master_dataset.to_csv('data/clean/STEP 3/XGBoost/NP_by_country_FR.csv', index=False)
 
     print("Master dataset created and saved to 'data/clean/STEP 3/NP_by_country.csv'")

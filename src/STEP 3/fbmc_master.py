@@ -198,8 +198,19 @@ price_paths = [price_path_be, price_path_de, price_path_fr, price_path_nl]
 
 areas = ['BZN|BE', 'BZN|DE-LU', 'BZN|FR', 'BZN|NL']
 
-# Create master dataset
-master_dataset = create_master_dataset(gen_paths, load_paths, price_paths, areas)
-master_dataset.to_csv('data/clean/STEP 3/NP_by_country.csv')
+def filter_areas(df, countries = ['FR']):
+    df = df.copy()
+    df.drop(columns=['Generation','import/export flag'], inplace=True)
 
-print("Master dataset created and saved to 'data/clean/STEP 3/NP_by_country.csv'")
+    return df[df['Area'].isin(countries)].reset_index(drop=True)
+
+# Create master dataset
+
+if __name__ == "__main__":
+    master_dataset = create_master_dataset(gen_paths, load_paths, price_paths, areas)
+    master_dataset.to_csv('data/clean/STEP 3/NP_by_country.csv')
+
+    filtered_master_dataset = filter_areas(master_dataset)
+    filtered_master_dataset.to_csv('data/clean/STEP 3/XGBoost/NP_by_country_FR.csv', index=False)
+
+    print("Master dataset created and saved to 'data/clean/STEP 3/NP_by_country.csv'")

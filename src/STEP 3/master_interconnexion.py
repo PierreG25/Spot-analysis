@@ -79,9 +79,7 @@ def spread_dataset(df_zone, df_lines,
 
     # Compute line flows
     df_flw = flow_lines(df_zone, df_lines)
-
-    # price_BE = df_zone[df_zone['Area'].str.contains('BE')][[datetime_col, price_col]]
-    
+  
     duplicates = df_zone[df_zone.duplicated(subset = [datetime_col, zone_col], keep=False)]
 
     # Sort them so you can see the conflicting rows next to each other

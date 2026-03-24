@@ -171,7 +171,6 @@ def calculate_metrics(df_gen, df_load):
     df_load.to_csv('data/raw/fbmc/load/load_debug.csv')
     df = pd.merge(df_gen, df_load, on=['Time', 'Area'], suffixes=('_gen', '_load'))
     df['Net position'] = df['Generation'] - df['Total load']
-    df['import/export flag'] = df['Net position'].apply(lambda x: 'import' if x < 0 else 'export')
     return df
 
 # Main function to create master dataset
@@ -247,6 +246,8 @@ def build_country_spreads(
         result['congestion_' + ref_country + '_' + code] = result[f"spread_{ref_country}_{code}"].abs() >= epsilon
         
         result.drop(columns=[f"Price_{code}"], inplace=True)
+
+    result.drop(columns=["Area"], inplace=True)  # Drop the 'Area' column as it's now redundant
 
     return result
 

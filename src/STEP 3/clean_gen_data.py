@@ -8,7 +8,7 @@ df_gen_fr = pd.read_csv(gen_path_fr)
 df_gen_fr = setup_time(df_gen_fr, "Generation (MW)")
 
 
-def non_dispatchable_gen(df, types = ["Other renewable",
+def non_dispatchable_gen(df, non_dispatch_col = 'Renewable' , types = ["Other renewable",
                                         "Solar",
                                         "Marine",
                                         "Wind Offshore",
@@ -20,7 +20,7 @@ def non_dispatchable_gen(df, types = ["Other renewable",
     """
 
     df = df.copy()
-    df['Renewable'] = df[types].sum(axis=1)
+    df[non_dispatch_col] = df[types].sum(axis=1)
     df.drop(columns=types, inplace=True)
 
     return df

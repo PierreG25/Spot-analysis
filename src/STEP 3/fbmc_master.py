@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-# ============= EXTRACT PTDF COEFFICIENTS FROM CSV FILE ============= #
+# ============= DEFINE PATHS ============= #
 
 gen_path_be = 'data/raw/fbmc/generation/2025_generation_be_raw.csv'
 gen_path_de = 'data/raw/fbmc/generation/2025_generation_de_raw.csv'
@@ -46,7 +46,7 @@ def flag_dst_rows(df, datetime_col = "MTU (CET/CEST)") -> pd.Series:
     mask = df[datetime_col].str.contains(DST_PATTERN, regex=True)
     return mask
 
-def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
+def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)", group_cols=None):
     """Downsample to 15-min resolution by forward filling each hour into 4 slots."""
     dt = pd.to_datetime(df[datetime_col])
     interval = (
@@ -60,10 +60,12 @@ def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
 
     if interval == pd.Timedelta("15min"):
         return df  # If already 15min, return the df as is
-    
-    df.to_csv('data/debug/df_before_downsample_debug.csv')
-    group_cols = df.columns.difference([datetime_col, value_col]).tolist()
 
+    if group_cols is None:
+        candidate_cols = ["Area", "Production Type", "Sequence"]
+        group_cols = [c for c in candidate_cols if c in df.columns]
+
+    print(f"group_cols: {group_cols}")
     # This creates a 'dummy' row at the very end of each group (e.g., 00:00 of the next day)
     # so that resample('15min') is forced to fill the slots in between.
     group_maxes = df.groupby(group_cols)[datetime_col].max().reset_index()
@@ -82,6 +84,7 @@ def downsample_to_15(df, value_col, datetime_col = "MTU (CET/CEST)"):
         .ffill(limit=ffill_limit)
         .reset_index()
     )
+    print(f"df_15min columns after resample: {df_15min.columns}")
 
     # The dummy record is always the last row of each resampled group
     df_15min = df_15min.drop(df_15min.groupby(group_cols).tail(1).index)
@@ -107,8 +110,9 @@ def setup_time(df, value_cols, datetime_col = "MTU (CET/CEST)", format = "mixed"
     
     # Remove rows with DST transition hours
     df = df.loc[~day.isin(day_with_dst)]
-    
+    print(f"df_setup_time columns: {df.columns}")
     df = downsample_to_15(df, value_cols)
+
     day = df[datetime_col].dt.date
     df = df.loc[~day.isin(day_with_dst)]
     
@@ -154,7 +158,8 @@ def load_price_data(paths, areas):
     data_frames = []
     for path, area_name in zip(paths, areas):
         df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
-        df = sequence_selection(df, sequence = 'Sequence')
+        print(f"df_load_price_data columns for {area_name}: {df.columns}")
+        df = sequence_selection(df)
         df = setup_time(df, "Day-ahead Price (EUR/MWh)")
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Day-ahead Price (EUR/MWh)": "Price"})
         df['Area'] = area_name
@@ -167,8 +172,6 @@ def load_price_data(paths, areas):
 # Function to calculate net position and renewable share
 
 def calculate_metrics(df_gen, df_load):
-    df_gen.to_csv('data/raw/fbmc/generation/gen_debug.csv')
-    df_load.to_csv('data/raw/fbmc/load/load_debug.csv')
     df = pd.merge(df_gen, df_load, on=['Time', 'Area'], suffixes=('_gen', '_load'))
     df['Net position'] = df['Generation'] - df['Total load']
     return df

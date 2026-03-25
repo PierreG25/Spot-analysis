@@ -13,10 +13,13 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
 
+from fbmc_master import sequence_selection, setup_time, downsample_to_15
 
 path_1 = 'data/clean/STEP 3/XGBoost/generation_by_type_fr.csv'
 path_2 = 'data/clean/STEP 3/XGBoost/NP_by_country_FR.csv'
 path_3 = 'data/clean/STEP 3/XGBoost/interco_stress_metrics.csv'
+
+path_fr_price_24 = 'data/raw/fbmc/price/2024_price_fr_raw.csv'
 
 df_gen = pd.read_csv(path_1, parse_dates=['Time'])
 df_np = pd.read_csv(path_2, parse_dates=['Time'])
@@ -24,7 +27,7 @@ df_interco = pd.read_csv(path_3, parse_dates=['Time'])
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
-COMPUTE_DATA = False
+COMPUTE_DATA = True
 OPTIUNA_TUNING = False
 SHAP_ANALYSIS = True
 
@@ -40,6 +43,22 @@ plt.style.use("seaborn-v0_8-whitegrid")
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. PREPARE THE DATA
 # ══════════════════════════════════════════════════════════════════════════════
+
+def add_cols_price(df_1, df_2, col='Price 2024'):
+    """
+    Add a new column to df_1 with the day-ahead price from df_2, after processing and smoothing it.
+    """
+
+    df_2 = sequence_selection(df_2)
+    df_2 = setup_time(df_2, "Day-ahead Price (EUR/MWh)")
+    df_2 = df_2.rename(columns={"MTU (CET/CEST)": "Time", "Day-ahead Price (EUR/MWh)": col})
+    df_2[col] = df_2[col].rolling(window=672, center=True, min_periods=1).mean()  # Simple moving average sur 96 périodes (24h)
+
+    df_2.to_csv('data/clean/STEP 3/XGBoost/price_2024_15min.csv', index=False)
+
+    df_1[col] = df_2[col]
+
+    return df_1
 
 def time_cols(df):
     df['hour'] = df['Time'].dt.hour
@@ -72,6 +91,8 @@ def prepare_data(df_gen, df_np, df_interco):
     df['res_load'] = df['Total load'] - df['Renewable']
     df.drop(columns=['Total load', 'Renewable'], inplace=True)
 
+    df = add_cols_price(df, pd.read_csv(path_fr_price_24), col='Price 2024')
+
     df.to_csv('data/clean/STEP 3/XGBoost/master_dataset_v2.csv', index=False)
     print("Data prepared and saved to 'master_dataset_v2.csv'")
     return df
@@ -89,8 +110,16 @@ def load_and_prepare(path: str) -> pd.DataFrame:
  
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. SCENARIOS - STRESS TESTING
+# 2. SCENARIOS - TESTING
 # ══════════════════════════════════════════════════════════════════════════════
+
+def create_scenarios(df):
+    """
+    Create scenarios simulating different market conditions (e.g., high demand, low renewable generation, congestion)
+    by modifying the relevant features in the test set. This allows us to evaluate 
+    the model's performance under stress conditions and identify potential weaknesses.
+    """
+
 
  
 # ══════════════════════════════════════════════════════════════════════════════
@@ -156,7 +185,7 @@ def run_baseline(X_train, y_train, X_val, y_val):
         random_state=RANDOM_SEED,
         n_jobs=-1,
         early_stopping_rounds=30,
-        eval_metric="mae",
+        eval_metric="rmse",
     )
     model.fit(
         X_train, y_train,
@@ -175,7 +204,7 @@ def run_baseline(X_train, y_train, X_val, y_val):
  
 def tune_hyperparams(X_train_full, y_train_full):
     """
-    Optuna tunin using time-series cross-validation on the full train+val set to maximize out-of-fold MAE.
+    Optuna tunin using time-series cross-validation on the full train+val set to maximize out-of-fold RMSE.
     """
     tscv = TimeSeriesSplit(n_splits=N_SPLITS)
  
@@ -192,7 +221,7 @@ def tune_hyperparams(X_train_full, y_train_full):
             "reg_lambda"        : trial.suggest_float("reg_lambda", 0.5, 5),
             "random_state"      : RANDOM_SEED,
             "n_jobs"            : -1,
-            "eval_metric"       : "mae",
+            "eval_metric"       : "rmse",
         }
  
         fold_maes = []
@@ -204,7 +233,7 @@ def tune_hyperparams(X_train_full, y_train_full):
             m.fit(X_f_tr, y_f_tr,
                   eval_set=[(X_f_val, y_f_val)],
                   verbose=False)
-            fold_maes.append(mean_absolute_error(y_f_val, m.predict(X_f_val)))
+            fold_maes.append(np.sqrt(mean_squared_error(y_f_val, m.predict(X_f_val))))
  
         return np.mean(fold_maes)
  
@@ -214,7 +243,7 @@ def tune_hyperparams(X_train_full, y_train_full):
     study.optimize(objective, n_trials=N_TRIALS, show_progress_bar=True)
  
     best = study.best_params
-    print(f"\n✅ Meilleurs paramètres (MAE CV = {study.best_value:.2f} €/MWh)")
+    print(f"\n** Meilleurs paramètres (RMSE CV = {study.best_value:.2f} €/MWh)")
     for k, v in best.items():
         print(f"   {k}: {v}")
     print()
@@ -250,7 +279,7 @@ def train_final_model(best_params, X_train, y_train, X_val, y_val):
     model = XGBRegressor(
         **best_params,
         early_stopping_rounds=50,
-        eval_metric="mae",
+        eval_metric="rmse",
         n_jobs=-1,
     )
     model.fit(
@@ -308,7 +337,7 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
     ax.axvline(0, color="red", linestyle="--")
     ax.set_xlabel("Résidu (€/MWh)")
     ax.set_ylabel("Fréquence")
-    ax.set_title(f"Distribution des résidus — MAE={metrics['Test ']['MAE']:.2f} €/MWh")
+    ax.set_title(f"Distribution des résidus — RMSE={metrics['Test ']['RMSE']:.2f} €/MWh")
  
     # (d) Résidus vs Prix réel
     ax = axes[1, 1]
@@ -335,12 +364,26 @@ def shap_analysis(model, X_train, X_test, features):
     shap_values = explainer(X_test)          # ShapValues object
  
     # ── (a) Summary plot — importance globale ──────────────────────────────
-    plt.figure(figsize=(10, 8))
-    shap.summary_plot(shap_values, X_test, plot_type="bar",
-                      max_display=20, show=False)
+    # Importance globale = moyenne des |SHAP values|
+    importance = np.abs(shap_values.values).mean(axis=0)
+
+    # DataFrame pour trier
+    imp_df = pd.DataFrame({
+        "feature": X_test.columns,
+        "importance": importance
+    }).sort_values("importance", ascending=False).head(20)
+
+    # Pour avoir les features les plus importantes de gauche à droite
+    imp_df = imp_df.sort_values("importance", ascending=False)
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(imp_df["feature"], imp_df["importance"])
+    plt.xticks(rotation=45, ha="right")
+    plt.ylabel("Mean(|SHAP value|)")
+    plt.xlabel("Features")
     plt.title("SHAP — Importance globale des features", fontsize=13)
     plt.tight_layout()
-    plt.savefig("shap_importance.png", dpi=150, bbox_inches="tight")
+    plt.savefig("shap_importance_vertical.png", dpi=150, bbox_inches="tight")
     plt.show()
  
     # ── (b) Beeswarm plot — direction d'impact ────────────────────────────
@@ -509,6 +552,6 @@ if __name__ == "__main__":
         shap_values, importances = shap_analysis(final_model, X_train, X_test, FEATURES)
  
     # ── 8. Regimes ───────────────────────────────────────────────────────────
-    regime_analysis(test, y_test, pred_test)
+    # regime_analysis(test, y_test, pred_test)
  
     print("\n🎯 Pipeline terminé.")

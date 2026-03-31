@@ -16,8 +16,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from fbmc_master import sequence_selection, setup_time, downsample_to_15
 
-save_plots_path = 'figures/STEP 3/XGBoost/FR only/'
-best_params_path = 'data/clean/STEP 3/XGBoost/best_params_FR_only.json'
+save_plots_path = 'figures/STEP 3/XGBoost'
 
 path_1 = 'data/clean/STEP 3/XGBoost/generation_by_type_fr.csv'
 path_2 = 'data/clean/STEP 3/XGBoost/NP_by_country_FR.csv'
@@ -31,10 +30,10 @@ df_interco = pd.read_csv(path_3, parse_dates=['Time'])
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
-EXPERIMENT_NAME = "fr_only"
+EXPERIMENT_NAME = "Full" # 2 options: "fr_only", "Full"
 
 COMPUTE_DATA = True
-OPTIUNA_TUNING = False
+OPTIUNA_TUNING = True
 SHAP_ANALYSIS = True
 
 DATA_PATH   = "data/clean/STEP 3/XGBoost/master_dataset_v2.csv"
@@ -98,11 +97,7 @@ def lag_features(df, col='Price', lags=[96, 672]):
 
 def prepare_data(df_gen,
                  df_np,
-                 df_interco,
-                 cols_to_drop = ['stressed_NL', 'congestion_FR_NL', 'spread_FR_NL', 'stress_NL',
-                                 'stressed_BE', 'congestion_FR_BE', 'spread_FR_BE', 'stress_BE',
-                                 'stressed_DE', 'congestion_FR_DE', 'spread_FR_DE', 'stress_DE',
-                                 'congestion_FR_ES', 'spread_FR_ES', 'Net position']):
+                 df_interco):
     df = pd.merge(df_np, df_gen, on='Time', how='inner')
     df = pd.merge(df, df_interco, on='Time', how='left').fillna({
         'stress_BE': 0,
@@ -120,7 +115,13 @@ def prepare_data(df_gen,
     df['res_load'] = df['Total load'] - df['Renewable']
     df.drop(columns=['Total load', 'Renewable'], inplace=True)
 
-    df = drop_cols(df, cols_to_drop)  # On garde les stress et les indicateurs de congestion, pas les flux bruts
+    if EXPERIMENT_NAME == "fr_only":
+        cols_to_drop = ['stressed_NL', 'congestion_FR_NL', 'spread_FR_NL', 'stress_NL',
+                        'stressed_BE', 'congestion_FR_BE', 'spread_FR_BE', 'stress_BE',
+                        'stressed_DE', 'congestion_FR_DE', 'spread_FR_DE', 'stress_DE',
+                        'congestion_FR_ES', 'spread_FR_ES', 'Net position']
+
+        df = drop_cols(df, cols_to_drop)
 
     df.to_csv('data/clean/STEP 3/XGBoost/master_dataset_v2.csv', index=False)
     print("Data prepared and saved to 'master_dataset_v2.csv'")
@@ -138,19 +139,6 @@ def load_and_prepare(path):
     return df
  
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 2. SCENARIOS - TESTING
-# ══════════════════════════════════════════════════════════════════════════════
-
-def create_scenarios(df):
-    """
-    Create scenarios simulating different market conditions (e.g., high demand, low renewable generation, congestion)
-    by modifying the relevant features in the test set. This allows us to evaluate 
-    the model's performance under stress conditions and identify potential weaknesses.
-    """
-
-
- 
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. SPLIT TEMPOREL  (70% train | 15% val | 15% test)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -279,13 +267,13 @@ def tune_hyperparams(X_train_full, y_train_full):
     return best, study
 
 
-def save_best_params(best_params, file_path = best_params_path):
+def save_best_params(best_params, file_path = f"{save_plots_path}/{EXPERIMENT_NAME}/best_params.json"):
     with open(file_path, "w") as f:
         json.dump(best_params, f)
     print(f"Best parameters saved to {file_path}")
 
 
-def load_best_params(file_path = best_params_path):
+def load_best_params(file_path = f"{save_plots_path}/{EXPERIMENT_NAME}/best_params.json"):
     try:
         with open(file_path, "r") as f:
             best_params = json.load(f)
@@ -326,7 +314,7 @@ def train_final_model(best_params, X_train, y_train, X_val, y_val):
  
 def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
                     df_test,
-                    path = save_plots_path):
+                    path = f"{save_plots_path}/{EXPERIMENT_NAME}/"):
     print("── Final model evaluation ──")
     metrics = {}
     for X, y, lbl in [(X_train, y_train, "Train"),
@@ -446,13 +434,13 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
         print("   → Graphique sauvegardé : residuals_heatmap.png\n")
 
     return pred_test, residuals, metrics
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 8. ANALYSE SHAP — drivers du prix
 # ══════════════════════════════════════════════════════════════════════════════
  
-def shap_analysis(model, X_train, X_test, features, path = save_plots_path):
+def shap_analysis(model, X_train, X_test, features, path = f"{save_plots_path}/{EXPERIMENT_NAME}/"):
     print("── Analyse SHAP ──")
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer(X_test)          # ShapValues object
@@ -527,7 +515,23 @@ def shap_analysis(model, X_train, X_test, features, path = save_plots_path):
     summary["Rank"] = range(1, len(summary) + 1)
     print(summary.to_string(index=False))
     return shap_values, importances
- 
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 8. Models comparison trained with different feature sets (ex: fr_only vs full)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def models_comparison(df,
+    model1_path,
+    model2_path,
+    features1_path,
+    features2_path,
+    label1="Model 1",
+    label2="Model 2"):
+
+    return df
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -575,7 +579,27 @@ if __name__ == "__main__":
         final_model, X_train, y_train, X_val, y_val, X_test, y_test, test
     )
     
-    final_model.save_model(f"{save_plots_path}final_xgboost_model.json")
+    final_model.save_model(f"{save_plots_path}/{EXPERIMENT_NAME}/final_xgboost_model.json")
+
+    with open(f"{save_plots_path}/{EXPERIMENT_NAME}/final_xgboost_model.json".replace(".json", "_features.json"), "w") as f:
+        json.dump(FEATURES, f, indent=2)
+
+    with open(f"{save_plots_path}/{EXPERIMENT_NAME}/final_xgboost_model.json".replace(".json", "_metrics.json"), "w") as f:
+        json.dump(metrics, f, indent=2)
+
+    metadata = {
+        "experiment_name": EXPERIMENT_NAME,
+        "best_iteration": int(final_model.best_iteration) if final_model.best_iteration is not None else None,
+        "features_count": len(FEATURES),
+        "train_start": str(train[DATE_COL].min()),
+        "train_end": str(train[DATE_COL].max()),
+        "val_start": str(val[DATE_COL].min()),
+        "val_end": str(val[DATE_COL].max()),
+        "test_start": str(test[DATE_COL].min()),
+        "test_end": str(test[DATE_COL].max()),
+    }
+    with open(f"{save_plots_path}/{EXPERIMENT_NAME}/final_xgboost_model.json".replace(".json", "_metadata.json"), "w") as f:
+        json.dump(metadata, f, indent=2)
 
     # ── 7. SHAP ──────────────────────────────────────────────────────────────
     if SHAP_ANALYSIS:

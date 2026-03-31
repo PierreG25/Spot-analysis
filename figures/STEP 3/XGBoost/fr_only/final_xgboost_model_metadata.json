@@ -1,0 +1,11 @@
+{
+  "experiment_name": "fr_only",
+  "best_iteration": 782,
+  "features_count": 22,
+  "train_start": "2024-01-01 00:00:00",
+  "train_end": "2025-08-16 18:45:00",
+  "val_start": "2025-08-16 19:00:00",
+  "val_end": "2025-10-23 21:15:00",
+  "test_start": "2025-10-23 21:30:00",
+  "test_end": "2025-12-31 23:45:00"
+}

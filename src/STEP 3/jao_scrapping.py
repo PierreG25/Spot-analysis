@@ -78,11 +78,11 @@ def fetch_day(
     return df
 
 
-def download_2025(out_dir: str = "data/raw/jao/shadow_prices/2025"):
+def download(out_dir: str = "data/raw/jao/shadow_prices/2025", year = 2024):
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    start = date(2025, 1, 1)
+    start = date(year, 1, 1)
     end = date(2026, 1, 1)
 
     # Example optional filter:
@@ -91,7 +91,7 @@ def download_2025(out_dir: str = "data/raw/jao/shadow_prices/2025"):
 
     with requests.Session() as session:
         d = start
-        for _ in tqdm(range((end - start).days), desc="Downloading CORE Shadow Prices 2025"):
+        for _ in tqdm(range((end - start).days), desc="Downloading CORE Shadow Prices"):
             out_file = out_path / f"shadowPrices_{d.isoformat()}.csv"
 
             if out_file.exists():
@@ -110,4 +110,4 @@ def download_2025(out_dir: str = "data/raw/jao/shadow_prices/2025"):
 
 
 if __name__ == "__main__":
-    download_2025()
+    download()

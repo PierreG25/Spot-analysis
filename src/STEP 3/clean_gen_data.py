@@ -2,9 +2,14 @@ import pandas as pd
 import numpy as np
 from fbmc_master import setup_time
 
-gen_path_fr = 'data/raw/fbmc/generation/2025_generation_fr_raw.csv'
+gen_path_fr_2025 = 'data/raw/fbmc/generation/2025_generation_fr_raw.csv'
+gen_path_fr_2024 = 'data/raw/fbmc/generation/2024_generation_fr_raw.csv'
 
-df_gen_fr = pd.read_csv(gen_path_fr)
+df_gen_fr_2025 = pd.read_csv(gen_path_fr_2025)
+df_gen_fr_2024 = pd.read_csv(gen_path_fr_2024)
+
+df_gen_fr = pd.concat([df_gen_fr_2024, df_gen_fr_2025], ignore_index=True)
+
 df_gen_fr = setup_time(df_gen_fr, "Generation (MW)")
 
 

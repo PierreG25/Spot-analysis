@@ -1,23 +1,26 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 
 # ============= DEFINE PATHS ============= #
 
-gen_path_be = 'data/raw/fbmc/generation/2025_generation_be_raw.csv'
-gen_path_de = 'data/raw/fbmc/generation/2025_generation_de_raw.csv'
-gen_path_fr = 'data/raw/fbmc/generation/2025_generation_fr_raw.csv'
-gen_path_nl = 'data/raw/fbmc/generation/2025_generation_nl_raw.csv'
+BASE_DIR = Path('data/raw/fbmc')
+COUNTRIES = ['be', 'de', 'fr', 'nl', 'es']
+YEARS = [2024, 2025]
+DATA_TYPES = ['generation', 'load', 'price']
 
-load_path_be = 'data/raw/fbmc/load/2025_load_be_raw.csv'
-load_path_de = 'data/raw/fbmc/load/2025_load_de_raw.csv'
-load_path_fr = 'data/raw/fbmc/load/2025_load_fr_raw.csv'
-load_path_nl = 'data/raw/fbmc/load/2025_load_nl_raw.csv'
+def get_paths(data_type, country, year):
+    """Retourne les chemins pour un type de données, triés par année puis par pays."""
+    return BASE_DIR / data_type / f'{year}_{data_type}_{country}_raw.csv'
+    
 
-price_path_be = 'data/raw/fbmc/price/2025_price_be_raw.csv'
-price_path_de = 'data/raw/fbmc/price/2025_price_de_raw.csv'
-price_path_fr = 'data/raw/fbmc/price/2025_price_fr_raw.csv'
-price_path_nl = 'data/raw/fbmc/price/2025_price_nl_raw.csv'
+# Utilisation
+# gen_paths   = get_paths('generation')
+# load_paths  = get_paths('load')
+# price_paths = get_paths('price')
+
+areas = ['BZN|BE', 'BZN|DE-LU', 'BZN|FR', 'BZN|NL', 'BZN|ES']
 
 # ======================== FIXING SEQUENCE ISSUE WITHIN THE SPOT PRICE ======================== #
 def sequence_selection(df, sequence = 'Sequence'):
@@ -124,48 +127,52 @@ def setup_time(df, value_cols, datetime_col = "MTU (CET/CEST)", format = "mixed"
 # ============= LOAD AND PREPROCESS df FUNCTIONS ============= #
 # Function to load and preprocess generation df
 
-def load_generation_data(paths, areas):
+def _load_data(data_type: str, years: list[int], countries: list[str], transform_fn) -> pd.DataFrame:
+    """Fonction générique : lit et concatène les années, puis applique la transformation par pays."""
     data_frames = []
-    for path, area_name in zip(paths, areas):
-        df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
+    for country in countries:
+        yearly_dfs = [
+            pd.read_csv(
+                get_paths(data_type, country, year),
+                na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"]
+            )
+            for year in years
+        ]
+        df = pd.concat(yearly_dfs, ignore_index=True)
+        df = transform_fn(df, country)
+        data_frames.append(df)
+    return pd.concat(data_frames, ignore_index=True)
 
+
+def load_generation_data(years: list[int] = YEARS, countries: list[str] = COUNTRIES) -> pd.DataFrame:
+    def transform(df, country):
         df = setup_time(df, "Generation (MW)")
-
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Generation (MW)": "Generation"})
         df = df.groupby(["Time", "Area"]).agg({"Generation": "sum"}).reset_index()
-        df['Area'] = area_name
-        df.to_csv('data/debug/gen_debug_' + f'{area_name}' + '.csv')
-        data_frames.append(df)
-    return pd.concat(data_frames, ignore_index=True)
+        df.to_csv(f'data/debug/gen_debug_{country}.csv')
+        return df
+    return _load_data('generation', years, countries, transform)
 
-# Function to load and preprocess load df
-def load_load_data(paths, areas):
-    data_frames = []
-    for path, area_name in zip(paths, areas):
-        df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
+
+def load_load_data(years: list[int] = YEARS, countries: list[str] = COUNTRIES) -> pd.DataFrame:
+    def transform(df, country):
         df.drop(columns=['Day-ahead Total Load Forecast (MW)'], inplace=True)
-
-        df = setup_time(df, "Actual Total Load (MW)") 
-        df.to_csv('data/debug/load_debug_' + f'{area_name}' + '.csv')
+        df = setup_time(df, "Actual Total Load (MW)")
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Actual Total Load (MW)": "Total load"})
         df = df[["Time", "Area", "Total load"]]
-        df['Area'] = area_name
+        df.to_csv(f'data/debug/load_debug_{country}.csv')
+        return df
+    return _load_data('load', years, countries, transform)
 
-        data_frames.append(df)
-    return pd.concat(data_frames, ignore_index=True)
 
-def load_price_data(paths, areas):
-    data_frames = []
-    for path, area_name in zip(paths, areas):
-        df = pd.read_csv(path, na_values=["N/A", "n/a", "NA", "-", "", " ", "  ", "\t", "n/e"])
-        print(f"df_load_price_data columns for {area_name}: {df.columns}")
+def load_price_data(years: list[int] = YEARS, countries: list[str] = COUNTRIES) -> pd.DataFrame:
+    def transform(df, country):
+        print(f"df_load_price_data columns for {country}: {df.columns.tolist()}")
         df = sequence_selection(df)
         df = setup_time(df, "Day-ahead Price (EUR/MWh)")
         df = df.rename(columns={"MTU (CET/CEST)": "Time", "Day-ahead Price (EUR/MWh)": "Price"})
-        df['Area'] = area_name
-        df = df[["Time", "Area", "Price"]]
-        data_frames.append(df)
-    return pd.concat(data_frames, ignore_index=True)
+        return df[["Time", "Area", "Price"]]
+    return _load_data('price', years, countries, transform)
 
 
 # ============= CALCULATE METRICS AND CREATE MASTER DATASET ============= #
@@ -177,10 +184,11 @@ def calculate_metrics(df_gen, df_load):
     return df
 
 # Main function to create master dataset
-def create_master_dataset(gen_paths, load_paths, price_paths, areas):
-    df_gen = load_generation_data(gen_paths, areas)
-    df_load = load_load_data(load_paths, areas)
-    df_price = load_price_data(price_paths, areas)
+def create_master_dataset(areas):
+    df_gen = load_generation_data()
+    df_load = load_load_data()
+    df_price = load_price_data()
+
     df_gen.to_csv('data/debug/gen_debug')
     df_load.to_csv('data/debug/load_debug')
     df_price.to_csv('data/debug/price_debug')
@@ -188,24 +196,17 @@ def create_master_dataset(gen_paths, load_paths, price_paths, areas):
     master_df = calculate_metrics(df_gen, df_load)
     master_df = pd.merge(master_df, df_price, on=['Time', 'Area'], how='left')
 
+    print(f"Areas in master_df before cleaning: {master_df['Area'].unique()}")
     master_df['Area'] = master_df['Area'].str.strip().str.split('|').str[1].str.split('-').str[0]
 
     return master_df
-
-
-# Define paths and areas
-gen_paths = [gen_path_be, gen_path_de, gen_path_fr, gen_path_nl]
-load_paths = [load_path_be, load_path_de, load_path_fr, load_path_nl]
-price_paths = [price_path_be, price_path_de, price_path_fr, price_path_nl]
-
-areas = ['BZN|BE', 'BZN|DE-LU', 'BZN|FR', 'BZN|NL']
 
 
 def build_country_spreads(
     df,
     epsilon = 0.1,
     ref_country = "FR",
-    countries_code = ["BE", "DE", "NL"],
+    countries_code = ["BE", "DE", "NL", "ES"],
 ):
     """
     Return the dataset filtered on `country` with added spread columns
@@ -257,7 +258,7 @@ def build_country_spreads(
 
 # Create NP dataset
 if __name__ == "__main__":
-    master_dataset = create_master_dataset(gen_paths, load_paths, price_paths, areas)
+    master_dataset = create_master_dataset(areas)
     master_dataset.to_csv('data/clean/STEP 3/NP_by_country.csv')
 
     filtered_master_dataset = build_country_spreads(master_dataset)

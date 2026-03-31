@@ -70,7 +70,7 @@ def spread_dataset(df_zone, df_lines,
                 price_col = 'Price',
                 zone_col = 'Area',
                 ref_country = 'FR',
-                zones = ['FR', 'BE', 'DE', 'NL'],
+                zones = ['FR', 'BE', 'DE', 'NL', 'ES'],
                 neighbors = True):
     """
     Create a dataset that combines price spreads and line flows, 

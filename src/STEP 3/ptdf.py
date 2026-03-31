@@ -3,6 +3,7 @@ import numpy as np
 
 
 def flow_lines(df, df_ptdf,
+               areas = ['BE', 'DE', 'FR', 'NL'],
                datetime_col = 'Time',
                zone = 'Area',
                value_col = 'Net position',
@@ -21,7 +22,7 @@ def flow_lines(df, df_ptdf,
     # print(np_wide.head())
     
     flows = []
-    areas = df_np[zone].unique()
+    print(f"Computing line flows for areas: {areas}")
 
     for (t, line), row in df_ptdf.groupby([datetime_col, line_col]):
         # Net positions at time t

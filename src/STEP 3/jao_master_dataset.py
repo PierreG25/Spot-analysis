@@ -2,10 +2,13 @@ import pandas as pd
 import glob
 import os
 from pathlib import Path
+from pandas.errors import EmptyDataError
 from jao_downsampling import upsample_by_repetition
 from jao_dst import remove_dst_rows, drop_timezone_info, filter_year
 
 jao_raw_folder = "../epex-spot-analysis/data/raw/jao/shadow_prices/2025/"
+START_YEAR = 2024
+END_YEAR = 2025
 
 def concatenate_files(folder_path, diff = ","):
     folder = Path(folder_path)
@@ -13,11 +16,22 @@ def concatenate_files(folder_path, diff = ","):
         raise FileNotFoundError(f"Folder does not exist: {folder}")
 
     all_files = glob.glob(os.path.join(folder_path, "*.csv"))
+    dataframes = []
 
-    df = pd.concat((pd.read_csv(f, sep = diff) for f in all_files), ignore_index=True)
-    print(f"Concatenated {len(all_files)}")
+    for f in all_files:
+        try:
+            if os.path.getsize(f) == 0:
+                print(f"Skipped empty file: {f}")
+                continue
+            dataframes.append(pd.read_csv(f, sep=diff))
+        except EmptyDataError:
+            print(f"Skipped invalid file: {f}")
 
-    return df
+    if not dataframes:
+        raise ValueError("No valid files to concatenate.")
+
+    return pd.concat(dataframes, ignore_index=True)
+
 
 def keep_relevant_columns(df):
     df = df.copy()
@@ -44,13 +58,17 @@ def keep_relevant_columns(df):
         "hub_NL": "NL",
     }, inplace=True)
     print(df.columns)
+
     return df
+
 
 def sort_time(df, datetime_col='Time'):
     df = df.copy()
     df[datetime_col] = pd.to_datetime(df[datetime_col], utc=True)
     df = df.sort_values(datetime_col).reset_index(drop=True)
+
     return df
+
 
 df_jao = concatenate_files(jao_raw_folder)
 df_jao_clean = keep_relevant_columns(df_jao)
@@ -62,7 +80,7 @@ df_jao_clean = upsample_by_repetition(df_jao_clean)
 # DST handling
 df_jao_clean = remove_dst_rows(df_jao_clean)
 df_jao_clean = drop_timezone_info(df_jao_clean)
-df_jao_clean = filter_year(df_jao_clean, 2025)
+df_jao_clean = filter_year(df_jao_clean, START_YEAR, END_YEAR)
 
 output_path = "../epex-spot-analysis/data/clean/STEP 3/shadow_prices/jao_clean_noDST_2025.csv"
 df_jao_clean.to_csv(output_path, index=False)

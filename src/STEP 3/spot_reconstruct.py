@@ -7,13 +7,17 @@ import shap
 import optuna
 import json
 optuna.logging.set_verbosity(optuna.logging.WARNING)
- 
+
+from scipy import stats
 from xgboost import XGBRegressor
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
 
 from fbmc_master import sequence_selection, setup_time, downsample_to_15
+
+save_plots_path = 'figures/STEP 3/XGBoost/FR only/'
+best_params_path = 'data/clean/STEP 3/XGBoost/best_params_FR_only.json'
 
 path_1 = 'data/clean/STEP 3/XGBoost/generation_by_type_fr.csv'
 path_2 = 'data/clean/STEP 3/XGBoost/NP_by_country_FR.csv'
@@ -27,6 +31,8 @@ df_interco = pd.read_csv(path_3, parse_dates=['Time'])
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
+EXPERIMENT_NAME = "fr_only"
+
 COMPUTE_DATA = True
 OPTIUNA_TUNING = False
 SHAP_ANALYSIS = True
@@ -60,6 +66,23 @@ def add_cols_price(df_1, df_2, col='Price 2024'):
 
     return df_1
 
+def drop_cols(df, cols):
+    if cols is None or len(cols) == 0:
+        return df
+    
+    df = df.copy()
+    df.drop(columns=cols, inplace=True)
+    return df
+
+def keep_cols(df, cols):
+    if cols is None or len(cols) == 0:
+        return df
+    
+    df = df.copy()
+    df = df[cols]
+    return df
+
+
 def time_cols(df):
     df['hour'] = df['Time'].dt.hour
     df['dayofweek'] = df['Time'].dt.dayofweek
@@ -73,7 +96,13 @@ def lag_features(df, col='Price', lags=[96, 672]):
     return df
 
 
-def prepare_data(df_gen, df_np, df_interco):
+def prepare_data(df_gen,
+                 df_np,
+                 df_interco,
+                 cols_to_drop = ['stressed_NL', 'congestion_FR_NL', 'spread_FR_NL', 'stress_NL',
+                                 'stressed_BE', 'congestion_FR_BE', 'spread_FR_BE', 'stress_BE',
+                                 'stressed_DE', 'congestion_FR_DE', 'spread_FR_DE', 'stress_DE',
+                                 'congestion_FR_ES', 'spread_FR_ES', 'Net position']):
     df = pd.merge(df_np, df_gen, on='Time', how='inner')
     df = pd.merge(df, df_interco, on='Time', how='left').fillna({
         'stress_BE': 0,
@@ -91,14 +120,14 @@ def prepare_data(df_gen, df_np, df_interco):
     df['res_load'] = df['Total load'] - df['Renewable']
     df.drop(columns=['Total load', 'Renewable'], inplace=True)
 
-    df = add_cols_price(df, pd.read_csv(path_fr_price_24), col='Price 2024')
+    df = drop_cols(df, cols_to_drop)  # On garde les stress et les indicateurs de congestion, pas les flux bruts
 
     df.to_csv('data/clean/STEP 3/XGBoost/master_dataset_v2.csv', index=False)
     print("Data prepared and saved to 'master_dataset_v2.csv'")
     return df
 
 
-def load_and_prepare(path: str) -> pd.DataFrame:
+def load_and_prepare(path):
     df = pd.read_csv(path, parse_dates=[DATE_COL])
     df = df.sort_values(DATE_COL).reset_index(drop=True)
  
@@ -180,7 +209,7 @@ def run_baseline(X_train, y_train, X_val, y_val):
     Train a baseline XGBoost model with default parameters and early stopping on validation set.
     """
     print("── Baseline XGBoost (params by default) ──")
-    model = XGBRegressor(
+    model = XGBRegressor(missing=np.inf,
         n_estimators=500,
         random_state=RANDOM_SEED,
         n_jobs=-1,
@@ -229,7 +258,7 @@ def tune_hyperparams(X_train_full, y_train_full):
             X_f_tr, y_f_tr = X_train_full.iloc[train_idx], y_train_full.iloc[train_idx]
             X_f_val, y_f_val = X_train_full.iloc[val_idx], y_train_full.iloc[val_idx]
  
-            m = XGBRegressor(**params, early_stopping_rounds=30)
+            m = XGBRegressor(missing=np.inf, **params, early_stopping_rounds=30)
             m.fit(X_f_tr, y_f_tr,
                   eval_set=[(X_f_val, y_f_val)],
                   verbose=False)
@@ -250,13 +279,13 @@ def tune_hyperparams(X_train_full, y_train_full):
     return best, study
 
 
-def save_best_params(best_params, file_path="data/clean/STEP 3/XGBoost/best_params.json"):
+def save_best_params(best_params, file_path = best_params_path):
     with open(file_path, "w") as f:
         json.dump(best_params, f)
     print(f"Best parameters saved to {file_path}")
 
 
-def load_best_params(file_path="data/clean/STEP 3/XGBoost/best_params.json"):
+def load_best_params(file_path = best_params_path):
     try:
         with open(file_path, "r") as f:
             best_params = json.load(f)
@@ -276,7 +305,7 @@ def train_final_model(best_params, X_train, y_train, X_val, y_val):
     Entraîne le modèle final avec early stopping sur la validation.
     """
     print("── Entraînement du modèle final ──")
-    model = XGBRegressor(
+    model = XGBRegressor(missing=np.inf,
         **best_params,
         early_stopping_rounds=50,
         eval_metric="rmse",
@@ -296,8 +325,9 @@ def train_final_model(best_params, X_train, y_train, X_val, y_val):
 # ══════════════════════════════════════════════════════════════════════════════
  
 def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
-                    df_test: pd.DataFrame):
-    print("── Évaluation finale ──")
+                    df_test,
+                    path = save_plots_path):
+    print("── Final model evaluation ──")
     metrics = {}
     for X, y, lbl in [(X_train, y_train, "Train"),
                       (X_val,   y_val,   "Val  "),
@@ -307,50 +337,114 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
  
     pred_test = model.predict(X_test)
     residuals = y_test.values - pred_test
+
+    mean_r  = np.mean(residuals)
+    std_r   = np.std(residuals)
+    skew_r  = stats.skew(residuals)
  
-    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig, axes = plt.subplots(1,2, figsize=(12, 6))
     fig.suptitle("Évaluation du modèle XGBoost — Prix spot FR", fontsize=14, fontweight="bold")
- 
+
     # (a) Actual vs Predicted — time series
-    ax = axes[0, 0]
-    ax.plot(df_test[DATE_COL].values, y_test.values, label="Réel", alpha=0.7, linewidth=0.8)
-    ax.plot(df_test[DATE_COL].values, pred_test,     label="Prédit", alpha=0.7, linewidth=0.8)
-    ax.set_title("Série temporelle : Réel vs Prédit (Test)")
+    ax = axes[0]
+    ax.plot(df_test[DATE_COL].values, y_test.values, label="Actual", alpha=0.7, linewidth=0.8)
+    ax.plot(df_test[DATE_COL].values, pred_test,     label="Forecast", alpha=0.7, linewidth=0.8)
+    ax.set_title(f"Market Price : Actual vs Forecast (Test) — RMSE={metrics['Test ']['RMSE']:.2f} €/MWh")
     ax.set_ylabel("€/MWh")
     ax.legend()
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 
- 
     # (b) Scatter Actual vs Predicted
-    ax = axes[0, 1]
+    ax = axes[1]
     lims = [min(y_test.min(), pred_test.min()), max(y_test.max(), pred_test.max())]
     ax.scatter(y_test, pred_test, alpha=0.3, s=5, color="steelblue")
     ax.plot(lims, lims, "r--", linewidth=1)
     ax.set_xlabel("Prix réel (€/MWh)")
     ax.set_ylabel("Prix prédit (€/MWh)")
     ax.set_title(f"Scatter — R²={metrics['Test ']['R2']:.4f}")
- 
-    # (c) Distribution des résidus
-    ax = axes[1, 0]
-    ax.hist(residuals, bins=80, color="steelblue", edgecolor="white", linewidth=0.3)
-    ax.axvline(0, color="red", linestyle="--")
-    ax.set_xlabel("Résidu (€/MWh)")
-    ax.set_ylabel("Fréquence")
-    ax.set_title(f"Distribution des résidus — RMSE={metrics['Test ']['RMSE']:.2f} €/MWh")
- 
-    # (d) Résidus vs Prix réel
-    ax = axes[1, 1]
-    ax.scatter(y_test, residuals, alpha=0.3, s=5, color="darkorange")
-    ax.axhline(0, color="red", linestyle="--")
-    ax.set_xlabel("Prix réel (€/MWh)")
-    ax.set_ylabel("Résidu (€/MWh)")
-    ax.set_title("Résidus vs Prix réel")
- 
+
     plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.savefig("evaluation.png", dpi=150, bbox_inches="tight")
+    plt.savefig(f"{path}evaluation.png", dpi=150, bbox_inches="tight")
     plt.show()
     print("   → Graphique sauvegardé : evaluation.png\n")
+
+
+    # --------- Residual analysis ---------
+    
+    fig, axes = plt.subplots(1,2, figsize=(12, 6))
+    fig.suptitle("Residual analysis", fontsize=14, fontweight="bold")
+
+    # (c) Distribution des résidus
+
+    ax = axes[0]
+    x_range = np.linspace(residuals.min(), residuals.max(), 300)
+
+    ax.hist(residuals, bins=80, density = True, color="steelblue", edgecolor="white", linewidth=0.3)
+    ax.plot(x_range, stats.norm.pdf(x_range, mean_r, std_r),
+            color="tomato", linewidth=1.6, linestyle="--", label="Normal dist. (μ, σ)")
+    ax.plot(x_range, stats.gaussian_kde(residuals)(x_range),
+            color="navy", linewidth=1.4, label="KDE")
+    ax.axvline(0,      color="black",      linestyle="--", linewidth=0.9, alpha=0.6)
+
+    ax.set_xlabel("Residuals (€/MWh)")
+    ax.set_ylabel("Density")
+    ax.set_title(f"Residuals distribution — RMSE={metrics['Test ']['RMSE']:.2f} €/MWh")
+    ax.legend(fontsize=8.5, framealpha=0.7)
+    ax.text(
+        0.97, 0.97,
+        f"μ  = {mean_r:+.2f} €/MWh\n"
+        f"σ  = {std_r:.2f} €/MWh\n"
+        f"Skewness = {skew_r:.3f}\n",
+        transform=ax.transAxes,
+        fontsize=8, verticalalignment="top", horizontalalignment="right",
+        bbox=dict(boxstyle="round,pad=0.4", facecolor="white",
+                  edgecolor="lightgray", alpha=0.85)
+    )
+ 
+    # (d) Q-Q plot
+
+    ax = axes[1]
+    (osm, osr), (slope, intercept, _) = stats.probplot(residuals, dist="norm")
+    se     = (1 / stats.norm.pdf(osm)) * np.sqrt(osr * (1 - osr) / len(residuals))
+    # ax.fill_between(osm, slope * osm + intercept - 1.96 * se * slope,
+    #                      slope * osm + intercept + 1.96 * se * slope,
+    #                 alpha=0.15, color="tomato", label="IC 95 %")
+    ax.scatter(osm, osr, s=4, color="steelblue", alpha=0.5, label="Quantiles obs.")
+    ax.plot(osm, slope * osm + intercept,
+            color="tomato", linewidth=1.5, linestyle="--", label="Normal dist. (μ, σ)")
+
+    ax.set_xlabel("Theoretical quantiles (Normal dist.)")
+    ax.set_ylabel("Observed quantiles (residuals)")
+    ax.set_title("Q-Q plot of residuals")
+    ax.legend(fontsize=8.5, framealpha=0.7)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(f"{path}residuals_analysis.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    print("   → Graphique sauvegardé : residuals_analysis.png\n")
+
+    print("── Résumé statistique des résidus ──")
+    print(f"   Moyenne       : {mean_r:+.3f} €/MWh  (biais — idéal = 0)")
+    print(f"   Écart-type    : {std_r:.3f} €/MWh")
+    print(f"   Skewness      : {skew_r:.3f}  (>0 = queue droite = sous-estim. spikes)")
+
+    # (e) Heatmap mean residuals by hour and month
+    if "hour" in df_test.columns and "month" in df_test.columns:
+        heatmap_data = df_test.copy()
+        heatmap_data["residual"] = residuals
+        pivot = heatmap_data.pivot_table(index="hour", columns="month", values="residual", aggfunc="mean")
+
+        plt.figure(figsize=(12, 6))
+        sns.heatmap(pivot, cmap="RdBu_r", center=0, linewidths=0.3, annot=False)
+        plt.title("Mean residuals by hour and month", fontsize=12)
+        plt.xlabel("Month")
+        plt.ylabel("Hour")
+        plt.tight_layout()
+        plt.savefig(f"{path}residuals_heatmap.png", dpi=150, bbox_inches="tight")
+        plt.show()
+        print("   → Graphique sauvegardé : residuals_heatmap.png\n")
+
     return pred_test, residuals, metrics
  
  
@@ -358,7 +452,7 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
 # 8. ANALYSE SHAP — drivers du prix
 # ══════════════════════════════════════════════════════════════════════════════
  
-def shap_analysis(model, X_train, X_test, features):
+def shap_analysis(model, X_train, X_test, features, path = save_plots_path):
     print("── Analyse SHAP ──")
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer(X_test)          # ShapValues object
@@ -383,15 +477,15 @@ def shap_analysis(model, X_train, X_test, features):
     plt.xlabel("Features")
     plt.title("SHAP — Importance globale des features", fontsize=13)
     plt.tight_layout()
-    plt.savefig("shap_importance_vertical.png", dpi=150, bbox_inches="tight")
+    plt.savefig(f"{path}shap_importance_vertical.png", dpi=150, bbox_inches="tight")
     plt.show()
  
     # ── (b) Beeswarm plot — direction d'impact ────────────────────────────
     plt.figure(figsize=(10, 8))
-    shap.summary_plot(shap_values, X_test, max_display=20, show=False)
+    shap.summary_plot(shap_values, X_test, max_display=15, show=False)
     plt.title("SHAP — Direction et magnitude d'impact", fontsize=13)
     plt.tight_layout()
-    plt.savefig("shap_beeswarm.png", dpi=150, bbox_inches="tight")
+    plt.savefig(f"{path}shap_beeswarm.png", dpi=150, bbox_inches="tight")
     plt.show()
  
     # ── (c) Dependence plots — top 4 features ────────────────────────────
@@ -407,23 +501,23 @@ def shap_analysis(model, X_train, X_test, features):
                              ax=ax, show=False)
         ax.set_title(feat, fontsize=10)
     plt.tight_layout()
-    plt.savefig("shap_dependence.png", dpi=150, bbox_inches="tight")
+    plt.savefig(f"{path}shap_dependence.png", dpi=150, bbox_inches="tight")
     plt.show()
  
     # ── (d) Heatmap SHAP par heure  ───────────────────────────────────────
-    if "hour" in features:
-        shap_df = pd.DataFrame(shap_values.values, columns=features)
-        shap_df["hour"] = X_test["hour"].values
-        heatmap_data = shap_df.groupby("hour")[top4].mean()
+    # if "hour" in features:
+    #     shap_df = pd.DataFrame(shap_values.values, columns=features)
+    #     shap_df["hour"] = X_test["hour"].values
+    #     heatmap_data = shap_df.groupby("hour")[top4].mean()
  
-        plt.figure(figsize=(12, 5))
-        sns.heatmap(heatmap_data.T, cmap="RdBu_r", center=0,
-                    linewidths=0.3, annot=False)
-        plt.title("SHAP moyen par heure — Top 4 features", fontsize=12)
-        plt.xlabel("Heure")
-        plt.tight_layout()
-        plt.savefig("shap_heatmap_hour.png", dpi=150, bbox_inches="tight")
-        plt.show()
+    #     plt.figure(figsize=(12, 5))
+    #     sns.heatmap(heatmap_data.T, cmap="RdBu_r", center=0,
+    #                 linewidths=0.3, annot=False)
+    #     plt.title("SHAP moyen par heure — Top 4 features", fontsize=12)
+    #     plt.xlabel("Heure")
+    #     plt.tight_layout()
+    #     plt.savefig(f"{path}shap_heatmap_hour.png", dpi=150, bbox_inches="tight")
+    #     plt.show()
  
     print("   → Graphiques SHAP sauvegardés\n")
  
@@ -433,72 +527,6 @@ def shap_analysis(model, X_train, X_test, features):
     summary["Rank"] = range(1, len(summary) + 1)
     print(summary.to_string(index=False))
     return shap_values, importances
- 
- 
-# ══════════════════════════════════════════════════════════════════════════════
-# 9. ANALYSE PAR RÉGIME  (segmentation des performances)
-# ══════════════════════════════════════════════════════════════════════════════
- 
-def regime_analysis(df_test: pd.DataFrame, y_test, pred_test):
-    print("\n── Analyse par régime de marché ──")
-    df_res = df_test.copy()
-    df_res["pred"]     = pred_test
-    df_res["residual"] = y_test.values - pred_test
-    df_res["abs_err"]  = np.abs(df_res["residual"])
- 
-    results = {}
- 
-    # Par heure
-    if "hour" in df_res.columns:
-        r = df_res.groupby("hour")["abs_err"].mean()
-        results["MAE par heure"] = r
- 
-    # Par mois
-    if "month" in df_res.columns:
-        r = df_res.groupby("month")["abs_err"].mean()
-        results["MAE par mois"] = r
- 
-    # Par jour de la semaine
-    if "dayofweek" in df_res.columns:
-        r = df_res.groupby("dayofweek")["abs_err"].mean()
-        results["MAE par jour"] = r
- 
-    # Par quartile de prix réel (performance sur les spikes)
-    df_res["price_quartile"] = pd.qcut(y_test, q=4,
-                                       labels=["Q1 (bas)", "Q2", "Q3", "Q4 (haut)"])
-    results["MAE par quartile de prix"] = df_res.groupby("price_quartile")["abs_err"].mean()
- 
-    # Par congestion (si colonnes présentes)
-    for cong_col in ["congestion_FR_BE", "congestion_FR_DE", "congestion_FR_NL"]:
-        if cong_col in df_res.columns:
-            r = df_res.groupby(cong_col)["abs_err"].mean()
-            results[f"MAE | {cong_col}"] = r
- 
-    # Affichage
-    for title, series in results.items():
-        print(f"\n  {title}")
-        print(series.to_string())
- 
-    # Graphique : MAE par heure & par quartile prix
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    fig.suptitle("Performance par régime de marché", fontsize=13, fontweight="bold")
- 
-    if "MAE par heure" in results:
-        results["MAE par heure"].plot(kind="bar", ax=axes[0], color="steelblue")
-        axes[0].set_title("MAE par heure de la journée")
-        axes[0].set_xlabel("Heure")
-        axes[0].set_ylabel("MAE (€/MWh)")
- 
-    results["MAE par quartile de prix"].plot(kind="bar", ax=axes[1], color="darkorange")
-    axes[1].set_title("MAE par quartile de prix réel")
-    axes[1].set_xlabel("Quartile")
-    axes[1].set_ylabel("MAE (€/MWh)")
- 
-    plt.tight_layout()
-    plt.savefig("regime_analysis.png", dpi=150, bbox_inches="tight")
-    plt.show()
-    print("\n   → Graphique sauvegardé : regime_analysis.png")
- 
  
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
@@ -546,12 +574,11 @@ if __name__ == "__main__":
     pred_test, residuals, metrics = full_evaluation(
         final_model, X_train, y_train, X_val, y_val, X_test, y_test, test
     )
- 
+    
+    final_model.save_model(f"{save_plots_path}final_xgboost_model.json")
+
     # ── 7. SHAP ──────────────────────────────────────────────────────────────
     if SHAP_ANALYSIS:
         shap_values, importances = shap_analysis(final_model, X_train, X_test, FEATURES)
- 
-    # ── 8. Regimes ───────────────────────────────────────────────────────────
-    # regime_analysis(test, y_test, pred_test)
  
     print("\n🎯 Pipeline terminé.")

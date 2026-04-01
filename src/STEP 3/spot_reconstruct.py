@@ -33,7 +33,7 @@ df_interco = pd.read_csv(path_3, parse_dates=['Time'])
 EXPERIMENT_NAME = "Full" # 2 options: "fr_only", "Full"
 
 COMPUTE_DATA = True
-OPTIUNA_TUNING = True
+OPTIUNA_TUNING = False
 SHAP_ANALYSIS = True
 
 DATA_PATH   = "data/clean/STEP 3/XGBoost/master_dataset_v2.csv"
@@ -433,11 +433,93 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
         plt.show()
         print("   → Graphique sauvegardé : residuals_heatmap.png\n")
 
+    # --------- Spikes analysis ---------
+
+    # (f) Spikes analysis
+    spikes_analysis(df_test, y_test, pred_test, metrics)
+
     return pred_test, residuals, metrics
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 8. ANALYSE SHAP — drivers du prix
+# 8. SPIKES ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def spikes_analysis(df_test,
+                    y_test,
+                    pred_test,
+                    metrics,
+                    spike_q=0.95,
+                    path = f"{save_plots_path}/{EXPERIMENT_NAME}/"):
+    
+    y_array = y_test.values
+    residuals = y_array - pred_test
+
+    # Détection des spikes positifs et negatifs
+    threshold_pos = np.quantile(y_array, spike_q)
+    threshold_neg = np.quantile(y_array, 1 - spike_q)
+
+    spike_mask = (y_array >= threshold_pos) | (y_array <= threshold_neg)
+    normal_mask = ~spike_mask
+
+    print(f"   Seuil Q{int(spike_q*100)} : {threshold_pos:.1f} €/MWh")
+    print(f"   Heures spike  : {spike_mask.sum()/4} ({spike_mask.mean()*100:.1f} %)")
+    print(f"   Heures normal : {normal_mask.sum()/4}\n")
+
+    # Real vs Predicted — Spikes vs Normal
+
+    fig, axes = plt.subplots(1,2, figsize=(12, 6))
+    fig.suptitle(
+        f"Spike analysis — threshold Q{int(spike_q*100)} = {threshold_pos:.1f} €/MWh",
+        fontsize=13, fontweight="bold"
+    )
+ 
+    ax = axes[0]
+
+    # Surlignage des zones spike (groupes consécutifs)
+    spike_series = pd.Series(spike_mask, index=df_test[DATE_COL].values)
+    changes      = spike_series.ne(spike_series.shift()).cumsum()
+    first_span   = True
+    for _, grp in spike_series.groupby(changes):
+        if grp.iloc[0]:
+            ax.axvspan(grp.index[0], grp.index[-1],
+                       color="tomato", alpha=0.20, zorder=1,
+                       label=f"Spike (Q{int(spike_q*100)}+)" if first_span else "_nolegend_")
+            first_span = False
+ 
+    ax.plot(df_test[DATE_COL], y_array,    color="black",     linewidth=0.9,
+            alpha=0.85, label="Actual",   zorder=3)
+    ax.plot(df_test[DATE_COL], pred_test, color="steelblue", linewidth=0.9,
+            alpha=0.80, label="Forecast", zorder=2)
+ 
+    ax.set_ylabel("Price (€/MWh)")
+    ax.set_title(
+        f"Actual vs Forecast — "
+        f"MAE global : {metrics['Test ']['MAE']:.2f} €/MWh  |  "
+        f"RMSE global : {metrics['Test ']['RMSE']:.2f} €/MWh"
+    )
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.legend(fontsize=9, framealpha=0.8)
+ 
+    # Sous-plot résidus — colorés rouge si spike, bleu si normal
+    ax2 = axes[1]
+    colors = ["tomato" if s else "steelblue" for s in spike_mask]
+    ax2.bar(df_test[DATE_COL], residuals, color=colors, width=0.04, alpha=0.55)
+    ax2.axhline(0, color="black", linewidth=0.8, linestyle="--")
+    ax2.set_ylabel("Residual (€/MWh)")
+    ax2.set_xlabel("Time")
+    ax2.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+ 
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.savefig(f"{path}spike_actual_vs_forecast.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    print("   → Graphique sauvegardé : spike_actual_vs_forecast.png\n")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 9. ANALYSE SHAP — price drivers
 # ══════════════════════════════════════════════════════════════════════════════
  
 def shap_analysis(model, X_train, X_test, features, path = f"{save_plots_path}/{EXPERIMENT_NAME}/"):

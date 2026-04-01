@@ -518,21 +518,6 @@ def shap_analysis(model, X_train, X_test, features, path = f"{save_plots_path}/{
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 8. Models comparison trained with different feature sets (ex: fr_only vs full)
-# ══════════════════════════════════════════════════════════════════════════════
-
-def models_comparison(df,
-    model1_path,
-    model2_path,
-    features1_path,
-    features2_path,
-    label1="Model 1",
-    label2="Model 2"):
-
-    return df
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
  

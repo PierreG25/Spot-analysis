@@ -436,9 +436,9 @@ def full_evaluation(model, X_train, y_train, X_val, y_val, X_test, y_test,
     # --------- Spikes analysis ---------
 
     # (f) Spikes analysis
-    spikes_analysis(df_test, y_test, pred_test, metrics)
+    spike_mask_pos, spike_mask_neg, _, _ = spikes_analysis(df_test, y_test, pred_test, metrics)
 
-    return pred_test, residuals, metrics
+    return pred_test, residuals, metrics, spike_mask_pos, spike_mask_neg
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -459,18 +459,24 @@ def spikes_analysis(df_test,
     threshold_pos = np.quantile(y_array, spike_q)
     threshold_neg = np.quantile(y_array, 1 - spike_q)
 
-    spike_mask = (y_array >= threshold_pos) | (y_array <= threshold_neg)
+    # spike_mask = (y_array >= threshold_pos) | (y_array <= threshold_neg)
+    # normal_mask = ~spike_mask
+
+    spike_mask_pos = y_array >= threshold_pos
+    spike_mask_neg = y_array <= threshold_neg
+    spike_mask = spike_mask_pos | spike_mask_neg
     normal_mask = ~spike_mask
 
     print(f"   Seuil Q{int(spike_q*100)} : {threshold_pos:.1f} €/MWh")
+    print(f"   Seuil Q{int((1-spike_q)*100)} : {threshold_neg:.1f} €/MWh")
     print(f"   Heures spike  : {spike_mask.sum()/4} ({spike_mask.mean()*100:.1f} %)")
     print(f"   Heures normal : {normal_mask.sum()/4}\n")
 
-    # Real vs Predicted — Spikes vs Normal
+    # -- (a) Real vs Predicted — Spikes vs Normal
 
     fig, axes = plt.subplots(1,2, figsize=(12, 6))
     fig.suptitle(
-        f"Spike analysis — threshold Q{int(spike_q*100)} = {threshold_pos:.1f} €/MWh",
+        f"Spike analysis \n threshold Q{int(spike_q*100)} = {threshold_pos:.1f} €/MWh \n threshold Q{int((1-spike_q)*100)} = {threshold_neg:.1f} €/MWh",
         fontsize=13, fontweight="bold"
     )
  
@@ -516,6 +522,51 @@ def spikes_analysis(df_test,
     plt.savefig(f"{path}spike_actual_vs_forecast.png", dpi=150, bbox_inches="tight")
     plt.show()
     print("   → Graphique sauvegardé : spike_actual_vs_forecast.png\n")
+
+
+    # -- (b) Metrics on spikes vs normal hours
+
+    def seg_metrics(mask):
+        mae = np.mean(np.abs(residuals[mask]))
+        rmse = np.sqrt(np.mean(residuals[mask]**2))
+        bias = np.mean(residuals[mask]) # bias = mean error (positive = underestimation, negative = overestimation)
+        return mae, rmse, bias
+    
+    mae_spike_pos, rmse_spike_pos, bias_spike_pos = seg_metrics(spike_mask_pos)
+    mae_spike_neg, rmse_spike_neg, bias_spike_neg = seg_metrics(spike_mask_neg)
+    mae_normal, rmse_normal, bias_normal = seg_metrics(normal_mask)
+
+    print("--- Metrics spikes vs normal hours ---")
+    print(f"  {'':22s} {'Normal':>10s} {'Spike (Q95+)':>14s} {'Δ+':>8s} {'Spike (Q05-)':>14s} {'Δ-':>8s}")
+    print(f"  {'MAE (€/MWh)':22s} {mae_normal:10.2f} {mae_spike_pos:14.2f} {mae_spike_pos - mae_normal:+8.2f} {mae_spike_neg:14.2f} {mae_spike_neg - mae_normal:+8.2f}")
+    print(f"  {'RMSE (€/MWh)':22s} {rmse_normal:10.2f} {rmse_spike_pos:14.2f} {rmse_spike_pos - rmse_normal:+8.2f} {rmse_spike_neg:14.2f} {rmse_spike_neg - rmse_normal:+8.2f}")
+    print(f"  {'Biais moyen (€/MWh)':22s} {bias_normal:10.2f} {bias_spike_pos:14.2f} {bias_spike_pos - bias_normal:+8.2f} {bias_spike_neg:14.2f} {bias_spike_neg - bias_normal:+8.2f}")
+
+    with open(f"{path}final_xgboost_model.json".replace(".json", "_spikes.json"), "w") as f:
+        json.dump({
+            "threshold_pos": threshold_pos,
+            "threshold_neg": threshold_neg,
+            "metrics": {
+                "normal": {"MAE": mae_normal, "RMSE": rmse_normal, "Bias": bias_normal},
+                "spike_pos": {"MAE": mae_spike_pos, "RMSE": rmse_spike_pos, "Bias": bias_spike_pos},
+                "spike_neg": {"MAE": mae_spike_neg, "RMSE": rmse_spike_neg, "Bias": bias_spike_neg},
+                "deltas": {
+                    "spike_pos - normal": {
+                        "MAE": mae_spike_pos - mae_normal,
+                        "RMSE": rmse_spike_pos - rmse_normal,
+                        "Bias": bias_spike_pos - bias_normal,
+                    },
+                    "spike_neg - normal": {
+                        "MAE": mae_spike_neg - mae_normal,
+                        "RMSE": rmse_spike_neg - rmse_normal,
+                        "Bias": bias_spike_neg - bias_normal,
+                    }
+                }
+            }
+        }, f, indent=4)
+    print(f"Spike metrics saved to {path}final_xgboost_model_spikes.json\n")
+
+    return spike_mask_pos, spike_mask_neg, threshold_pos, threshold_neg
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -599,6 +650,79 @@ def shap_analysis(model, X_train, X_test, features, path = f"{save_plots_path}/{
     return shap_values, importances
 
 
+def spikes_shap_analysis(shap_values, X_test, spike_mask_pos, spike_mask_neg, path = f"{save_plots_path}/{EXPERIMENT_NAME}/"):
+    """
+    Compare the SHAP values distribution for spike hours vs normal hours, for the top N important features.
+    """
+
+    spike_mask = spike_mask_pos | spike_mask_neg
+    normal_mask = ~spike_mask
+
+    # -- Extraction of shap values for spike vs normal hours
+    shap_spike_pos = shap_values.values[spike_mask_pos]
+    shap_spike_neg = shap_values.values[spike_mask_neg]
+    shap_normal = shap_values.values[normal_mask]
+
+    features = list(X_test.columns)
+
+    # -- Importante mean(|shap|) for spike vs normal hours
+    imp_global = pd.Series(np.abs(shap_values.values).mean(axis=0), index=features)
+    imp_spike_pos = pd.Series(np.abs(shap_spike_pos).mean(axis=0), index=features)
+    imp_spike_neg = pd.Series(np.abs(shap_spike_neg).mean(axis=0), index=features)
+    imp_normal = pd.Series(np.abs(shap_normal).mean(axis=0), index=features)
+
+    # -- Rank per regime
+    rank_global = imp_global.rank(ascending=False).astype(int)
+    rank_spike_pos = imp_spike_pos.rank(ascending=False).astype(int)
+    rank_spike_neg = imp_spike_neg.rank(ascending=False).astype(int)
+    rank_normal = imp_normal.rank(ascending=False).astype(int)
+
+    # Summary table
+    df_summary = pd.DataFrame({
+        "SHAP global": imp_global.round(3),
+        "Rank global": rank_global,
+        "SHAP spike pos": imp_spike_pos.round(3),
+        "Rank spike pos": rank_spike_pos,
+        "SHAP spike neg": imp_spike_neg.round(3),
+        "Rank spike neg": rank_spike_neg,
+        "SHAP normal": imp_normal.round(3),
+        "Rank normal": rank_normal,
+        "delta rank spike pos-normal": (rank_spike_pos - rank_normal),
+        "delta rank spike neg-normal": (rank_spike_neg - rank_normal),
+    }).sort_values("Rank spike pos")
+
+    print("\n-- Rank comparison : global vs spike vs normal --")
+    print(df_summary.to_string())
+    print()
+
+    # -- Barplot importance comparison global vs spike vs normal --
+
+    features = df_summary.index.tolist()
+
+    x = np.arange(len(features))
+    height = 0.25
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    ax.barh(x - 2*height, imp_global[features], height=height, label="Global", color="steelblue", alpha=0.7)
+    ax.barh(x - height, imp_spike_pos[features], height=height, label="Spike (Q95+)", color="tomato", alpha=0.7)
+    ax.barh(x, imp_spike_neg[features], height=height, label="Spike (Q05-)", color="orangered", alpha=0.7)
+    ax.barh(x + height, imp_normal[features], height=height, label="Normal", color="navy", alpha=0.7)
+
+    ax.set_yticks(x)
+    ax.set_yticklabels(features, fontsize=9)
+    ax.set_xlabel("Mean(|SHAP value|) (€/MWh)")
+    ax.set_title("SHAP importance — Global vs Spike vs Normal",
+                fontsize=12, fontweight="bold")
+    ax.legend(fontsize=9, framealpha=0.8)
+
+    plt.tight_layout()
+    plt.savefig(f"{path}shap_spike_vs_normal_barh.png", dpi=150, bbox_inches="tight")
+    plt.show()
+
+    return df_summary
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -642,7 +766,7 @@ if __name__ == "__main__":
     final_model = train_final_model(best_params, X_train, y_train, X_val, y_val)
  
     # ── 6. Evaluation ────────────────────────────────────────────────────────
-    pred_test, residuals, metrics = full_evaluation(
+    pred_test, residuals, metrics, spike_mask_pos, spike_mask_neg = full_evaluation(
         final_model, X_train, y_train, X_val, y_val, X_test, y_test, test
     )
     
@@ -671,5 +795,6 @@ if __name__ == "__main__":
     # ── 7. SHAP ──────────────────────────────────────────────────────────────
     if SHAP_ANALYSIS:
         shap_values, importances = shap_analysis(final_model, X_train, X_test, FEATURES)
+        spikes_shap_analysis(shap_values, X_test, spike_mask_pos, spike_mask_neg)
  
     print("\n🎯 Pipeline terminé.")
